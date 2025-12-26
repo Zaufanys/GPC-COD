@@ -916,40 +916,40 @@ function menu_adjust_value(int dir) {
     else if(menu_index == 3) cfg_recoil_vertical = clamp(cfg_recoil_vertical + (dir * 5), RECOIL_VERT_MIN, RECOIL_VERT_MAX);
     else if(menu_index == 4) cfg_recoil_horizontal = clamp(cfg_recoil_horizontal + dir, RECOIL_HORIZ_MIN, RECOIL_HORIZ_MAX);
 
-    // Movement Reset (5-7)
+    // Movement Reset (5-9)
     else if(menu_index == 5) feat_enabled[FEAT_MOVEREST] = !feat_enabled[FEAT_MOVEREST];
     else if(menu_index == 6) feat_mode[FEAT_MOVEREST] = cycle(feat_mode[FEAT_MOVEREST], 0, 3, dir);
     else if(menu_index == 7) feat_key_primary[FEAT_MOVEREST] = cycle(feat_key_primary[FEAT_MOVEREST], 0, 10, dir);
     else if(menu_index == 8) cfg_moverest_sprint_time = clamp(cfg_moverest_sprint_time + (dir * 10), MOVEREST_SPRINT_MIN, MOVEREST_SPRINT_MAX);
     else if(menu_index == 9) cfg_moverest_cancel_time = clamp(cfg_moverest_cancel_time + (dir * 10), MOVEREST_CANCEL_MIN, MOVEREST_CANCEL_MAX);
 
-    // Snaking (10-12)
+    // Snaking (10-13)
     else if(menu_index == 10) feat_enabled[FEAT_SNAKING] = !feat_enabled[FEAT_SNAKING];
     else if(menu_index == 11) feat_mode[FEAT_SNAKING] = cycle(feat_mode[FEAT_SNAKING], 0, 3, dir);
     else if(menu_index == 12) feat_key_primary[FEAT_SNAKING] = cycle(feat_key_primary[FEAT_SNAKING], 0, 10, dir);
     else if(menu_index == 13) cfg_snaking_cycle_time = clamp(cfg_snaking_cycle_time + (dir * 10), SNAKING_CYCLE_MIN, SNAKING_CYCLE_MAX);
 
-    // Wall Bounce (14-17)
+    // Wall Bounce (14-18)
     else if(menu_index == 14) feat_enabled[FEAT_WALLBOUNCE] = !feat_enabled[FEAT_WALLBOUNCE];
     else if(menu_index == 15) feat_mode[FEAT_WALLBOUNCE] = cycle(feat_mode[FEAT_WALLBOUNCE], 0, 3, dir);
     else if(menu_index == 16) feat_key_primary[FEAT_WALLBOUNCE] = cycle(feat_key_primary[FEAT_WALLBOUNCE], 0, 10, dir);
     else if(menu_index == 17) cfg_wallbounce_jump_time = clamp(cfg_wallbounce_jump_time + (dir * 10), WALLBOUNCE_JUMP_MIN, WALLBOUNCE_JUMP_MAX);
     else if(menu_index == 18) cfg_wallbounce_delay_time = clamp(cfg_wallbounce_delay_time + (dir * 10), WALLBOUNCE_DELAY_MIN, WALLBOUNCE_DELAY_MAX);
 
-    // Drop Shot (19-21)
+    // Drop Shot (19-22)
     else if(menu_index == 19) feat_enabled[FEAT_DROPMSHOT] = !feat_enabled[FEAT_DROPMSHOT];
     else if(menu_index == 20) feat_mode[FEAT_DROPMSHOT] = cycle(feat_mode[FEAT_DROPMSHOT], 0, 3, dir);
     else if(menu_index == 21) feat_key_primary[FEAT_DROPMSHOT] = cycle(feat_key_primary[FEAT_DROPMSHOT], 0, 10, dir);
     else if(menu_index == 22) cfg_dropshot_prone_time = clamp(cfg_dropshot_prone_time + (dir * 10), DROPSHOT_PRONE_MIN, DROPSHOT_PRONE_MAX);
 
-    // Bunny Hop (23-26)
+    // Bunny Hop (23-27)
     else if(menu_index == 23) feat_enabled[FEAT_BUNNYHOP] = !feat_enabled[FEAT_BUNNYHOP];
     else if(menu_index == 24) feat_mode[FEAT_BUNNYHOP] = cycle(feat_mode[FEAT_BUNNYHOP], 0, 3, dir);
     else if(menu_index == 25) feat_key_primary[FEAT_BUNNYHOP] = cycle(feat_key_primary[FEAT_BUNNYHOP], 0, 10, dir);
     else if(menu_index == 26) cfg_bunnyhop_jump_time = clamp(cfg_bunnyhop_jump_time + (dir * 5), BUNNYHOP_JUMP_MIN, BUNNYHOP_JUMP_MAX);
     else if(menu_index == 27) cfg_bunnyhop_interval = clamp(cfg_bunnyhop_interval + (dir * 10), BUNNYHOP_INTERVAL_MIN, BUNNYHOP_INTERVAL_MAX);
 
-    // Weapon Swap (28-31)
+    // Weapon Swap (28-32)
     else if(menu_index == 28) feat_enabled[FEAT_WEAPSWAP] = !feat_enabled[FEAT_WEAPSWAP];
     else if(menu_index == 29) feat_mode[FEAT_WEAPSWAP] = cycle(feat_mode[FEAT_WEAPSWAP], 0, 3, dir);
     else if(menu_index == 30) feat_key_primary[FEAT_WEAPSWAP] = cycle(feat_key_primary[FEAT_WEAPSWAP], 0, 10, dir);
