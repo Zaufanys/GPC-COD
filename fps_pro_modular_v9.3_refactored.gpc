@@ -109,6 +109,7 @@ define KEY_NONE          = 10;
 // ===== Menu States =====
 define MENU_CLOSED       = 0;
 define MENU_OPEN         = 1;
+define MENU_MAX_INDEX    = 35;  // Highest valid menu index (0-35 = 36 total items)
 
 // ===== Timing Constants (All in Milliseconds) =====
 
@@ -1199,7 +1200,7 @@ function init_default_config() {
     cfg_autosprint_delay = AUTOSPRINT_DELAY_DEFAULT;
 
     // Menu
-    menu_max_index = 35; // Total menu items - 1
+    menu_max_index = MENU_MAX_INDEX;  // Highest valid index (0-35)
 }
 
 /**
@@ -1293,7 +1294,7 @@ function load_config() {
     cfg_recoil_rate = RECOIL_RATE_DEFAULT;
 
     // Set menu max
-    menu_max_index = 35;
+    menu_max_index = MENU_MAX_INDEX;
 }
 
 //=============================================================================
