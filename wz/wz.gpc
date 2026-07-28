@@ -1,7 +1,7 @@
-#pragma METAINFO("WZ Core", 0, 3, "Zaufanys")
+#pragma METAINFO("WZ Core", 0, 4, "Zaufanys")
 
 /*
-    WZ Core v0.3
+    WZ Core v0.4
     Native Titan Two / GPC2 foundation for Call of Duty: Warzone.
 
     Default controller mapping:
@@ -90,6 +90,9 @@
 #define PM_RUMBLE_PROFILE         131
 #define PM_RUMBLE_CONFIRM_MS      132
 #define PM_SPRINT_THRESHOLD       136
+#define PM_ADS_RESPONSE_ENABLE    140
+#define PM_ADS_RESPONSE_DEADZONE  144
+#define PM_ADS_RESPONSE_SOFTNESS  148
 
 #define GCV_MAGIC              0x575A
 #define GCV_PROTOCOL_VERSION        1
@@ -169,6 +172,9 @@ bool sprint_latched = FALSE;
 uint32 rumble_hint_clock = 0;
 fix32 previous_look_x = 0.0;
 fix32 previous_look_y = 0.0;
+uint8 ads_response_enable = FALSE;
+fix32 ads_response_deadzone = 2.5;
+fix32 ads_response_softness = 45.0;
 
 // GCV packet v1 (16 bytes, little-endian).
 uint16 cv_magic = 0;
@@ -225,6 +231,9 @@ init {
     pmem_read(PM_PARACHUTE_FREEFALL_MS, &parachute_freefall_ms);
     pmem_read(PM_SPRINT_REFRESH_MS, &sprint_refresh_ms);
     pmem_read(PM_SPRINT_THRESHOLD, &sprint_threshold);
+    pmem_read(PM_ADS_RESPONSE_ENABLE, &ads_response_enable);
+    pmem_read(PM_ADS_RESPONSE_DEADZONE, &ads_response_deadzone);
+    pmem_read(PM_ADS_RESPONSE_SOFTNESS, &ads_response_softness);
     pmem_read(PM_REVIVE_ENABLE, &revive_enable);
     pmem_read(PM_REVIVE_HOLD_MS, &revive_hold_ms);
     pmem_read(PM_RUMBLE_HINT_ENABLE, &rumble_hint_enable);
@@ -268,6 +277,8 @@ init {
     parachute_freefall_ms = clamp(parachute_freefall_ms, 150, 2000);
     sprint_refresh_ms = clamp(sprint_refresh_ms, 400, 3000);
     sprint_threshold = clamp(sprint_threshold, 70.0, 100.0);
+    ads_response_deadzone = clamp(ads_response_deadzone, 0.0, 20.0);
+    ads_response_softness = clamp(ads_response_softness, 0.0, 100.0);
     revive_hold_ms = clamp(revive_hold_ms, 1000, 10000);
     rumble_low = clamp(rumble_low, 0, 100);
     rumble_high = clamp(rumble_high, rumble_low, 100);
@@ -304,6 +315,13 @@ main {
         update_gcv_state();
         update_fire_timer();
         update_rumble_profile_hint();
+
+        // ADS-only, output-side response shaping. It does not change the
+        // physical TMR stick or add timing; it reduces near-centre response
+        // before the other optional aim/recoil outputs are applied.
+        if(ads_response_enable && is_active(ADS)) {
+            apply_ads_response();
+        }
 
         if(combat_aim_active()) {
             if(aim_mode) apply_aim_engine();
@@ -349,6 +367,30 @@ main {
     else {
         reset_runtime();
     }
+}
+
+fix32 soften_ads_axis(fix32 value) {
+    fix32 magnitude = abs(value);
+    fix32 normalized = 0.0;
+    fix32 squared = 0.0;
+    fix32 output = 0.0;
+
+    if(magnitude <= ads_response_deadzone) return 0.0;
+
+    normalized = (magnitude - ads_response_deadzone) /
+                 (100.0 - ads_response_deadzone);
+    squared = normalized * normalized;
+    output = normalized + ((squared - normalized) * ads_response_softness / 100.0);
+    output = output * 100.0;
+
+    if(value < 0.0) return -output;
+    return output;
+}
+
+void apply_ads_response() {
+    set_val(LOOK_X, soften_ads_axis(get_actual(LOOK_X)));
+    set_val(LOOK_Y, soften_ads_axis(get_actual(LOOK_Y)));
+    return;
 }
 
 void update_gcv_state() {
@@ -1267,6 +1309,36 @@ default = 82
 minimum = 0
 maximum = 100
 step = 1
+
+[ADS Stick Softening]
+shortdesc = ADS only. Reduces near-centre right-stick response; it does not alter the physical stick or add latency.
+byteoffset = 140
+bitsize = 8
+control = checkbox
+default = 0
+item = Enable
+
+[ADS Inner Response Deadzone]
+shortdesc = Removes tiny centre movement before shaping. Start at 2.0 to 3.0 for TMR sticks.
+byteoffset = 144
+bitsize = 32
+control = spinboxf
+default = 25
+minimum = 0
+maximum = 200
+step = 1
+decimals = 1
+
+[ADS Soft-Curve Strength]
+shortdesc = 0 is linear. 40 to 55 softens small and medium movements while retaining full-stick speed.
+byteoffset = 148
+bitsize = 32
+control = spinboxf
+default = 450
+minimum = 0
+maximum = 1000
+step = 5
+decimals = 1
 
 </cfgdesc>
 */
