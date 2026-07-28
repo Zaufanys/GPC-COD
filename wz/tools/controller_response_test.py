@@ -67,22 +67,24 @@ def main():
         centre = []; until = time.perf_counter() + 3
         while time.perf_counter() < until:
             pg.event.pump(); centre += [joy.get_axis(args.right_x), joy.get_axis(args.right_y)]; time.sleep(.002)
-        print(f"Make smooth, continuous right-stick circles for {args.duration:.0f} seconds.")
+        print(f"Sweep right stick smoothly left/right and up/down for {args.duration:.0f} seconds; axes are measured separately.")
         previous = {args.right_x: joy.get_axis(args.right_x), args.right_y: joy.get_axis(args.right_y)}
-        points = []; until = time.perf_counter() + args.duration
+        points = {args.right_x: [], args.right_y: []}; until = time.perf_counter() + args.duration
         while time.perf_counter() < until:
             for event in pg.event.get():
                 if event.type == pg.JOYAXISMOTION and event.axis in previous and abs(event.value - previous[event.axis]) >= args.threshold:
-                    points.append(time.perf_counter_ns()); previous[event.axis] = event.value
-        result = summary(points)
+                    points[event.axis].append(time.perf_counter_ns()); previous[event.axis] = event.value
         print(f"\nDevice: {joy.get_name()} ({joy.get_guid()})")
         print(f"Centre max: {max((abs(x) for x in centre), default=0):.4f}")
         print(f"Suggested WZ Core ADS inner response deadzone: {suggested_deadzone(centre):.1f}")
-        if result:
-            n, median, p95, low, high = result
-            print(f"Observed event intervals: n={n}, median={median:.3f} ms, p95={p95:.3f} ms, min={low:.3f} ms, max={high:.3f} ms")
-            print(f"Observed moving-stick cadence (median): ~{1000/median:.1f} Hz")
-        else:
+        captured = False
+        for axis, label in ((args.right_x, "X"), (args.right_y, "Y")):
+            result = summary(points[axis])
+            if result:
+                captured = True
+                n, median, p95, low, high = result
+                print(f"Axis {label} (A{axis}): n={n}, median={median:.3f} ms (~{1000/median:.1f} Hz), p95={p95:.3f} ms, min={low:.3f} ms, max={high:.3f} ms")
+        if not captured:
             print("No meaningful events captured. Check axes with --monitor.")
         print("SDL-visible estimate only; compare repeated direct-PC and Titan-path runs.")
     except KeyboardInterrupt:
