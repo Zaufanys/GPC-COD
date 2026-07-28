@@ -114,6 +114,17 @@ class ConfigTests(unittest.TestCase):
                 source,
             )
 
+    def test_gpc_uses_native_titan_two_apis(self):
+        source = (PROJECT_DIR / "wz.gpc").read_text(encoding="utf-8")
+        self.assertNotIn("get_rtime(", source)
+        self.assertNotIn("combo_running(", source)
+        self.assertNotIn("get_rumble(", source)
+        for legacy_identifier in ("RUMBLE_A", "RUMBLE_B", "RUMBLE_RT", "RUMBLE_LT"):
+            self.assertNotIn(legacy_identifier, source)
+        self.assertIn("elapsed_time()", source)
+        self.assertIn("ffb_get_actual(FFB_1, NULL)", source)
+        self.assertIn("ffb_get_actual(FFB_4, NULL)", source)
+
     def test_template_output_directory_keeps_item_folder(self):
         weapon = next(
             group for group in self.config["groups"]
