@@ -10,16 +10,19 @@ Current milestone: `v0.1-foundation`
 - Optional left-stick rotational micro-motion
 - Three manual dynamic anti-recoil profiles with first-shot boost
 - Auto tactical sprint fallback
+- Boosted Sprint Refresh mode for periodic sprint/tactical-sprint re-input
 - Slide-to-jump and slide-to-stand sequences
 - Snake lateral movement, retained from the supplied script concept
 - Guarded fast-loot pulse, plate hold assist, and parachute cut/redeploy cycle
+- Quick Revive Hold Assist using a separate D-Pad Up + Use/Reload chord
+- Rumble Profile Hint fallback for calibrated recoil-profile selection
 - Runtime Context Lock for Buy Stations, loadouts, inventory, revives, and other shared-input screens
 - A 16-byte stale-safe GCV protocol
 - Fast ROI/template classification for weapon, optic, and UI state
 - Template calibration and latency benchmark tools
 - All gameplay-altering modules default **Off**
 
-The project intentionally does **not** call any controller-only behavior “Aim Lock.” Without video analysis there is no target position, weapon identity, shop state, parachute state, or revive state in ordinary controller input. Names such as AA V2/V3/V5, Pro Aim, Batts Sticky Aim, and Enhanced Tracking are vendor labels rather than shared technical standards.
+The project intentionally does **not** call any controller-only behavior “Aim Lock.” Without video analysis there is no target position, weapon identity, shop state, parachute state, or revive state in ordinary controller input. Names such as AA V2/V3/V5, Pro Aim, Batts Sticky Aim, and Enhanced Tracking are vendor labels rather than shared technical standards. See [LAB_FEATURES.md](LAB_FEATURES.md) for the re-added lab notes on speed, revive, rumble, and target/aim-lock boundaries.
 
 ## Install
 
@@ -52,6 +55,7 @@ The native game settings are preferred where they already solve the problem. The
 | D-Pad Left + Use/Reload | Guarded fast-loot pulse, when enabled |
 | D-Pad Left + Swap/Plate | Plate hold assist, when enabled |
 | D-Pad Left + Jump | Parachute cut/redeploy cycle, when enabled |
+| D-Pad Up + Use/Reload | Quick Revive Hold Assist, when enabled |
 
 Context Lock disables movement and action helpers. It does not change aim or anti-recoil.
 
@@ -86,7 +90,7 @@ See [RESEARCH_2026.md](RESEARCH_2026.md) for the feature/recoil findings and [CA
 
 The repository cannot ship universal screenshots: HUD scale, resolution, language, color filters, capture processing, optic, and weapon build all change the pixels. Calibration from your exact feed is what makes detection accurate.
 
-The CV worker intentionally detects HUD state only. It does not detect players or generate target-stick coordinates.
+The CV worker intentionally detects HUD state only. It does not detect players or generate target-stick coordinates. The lab notes explain how to keep any target-detection experiments separated from the live Titan output contract.
 
 ## Current Season 05 recoil notes
 
@@ -107,11 +111,11 @@ Sources:
 
 ## Important limitations
 
-- A script cannot raise Warzone's movement-speed cap. “Boosted sprint” here means faster sprint activation only.
-- A script cannot shorten a server-controlled revive timer. A blind revive macro would share the reload/interact input and create more conflicts than it solves.
+- A script cannot raise Warzone's movement-speed cap. “Boosted Sprint Refresh” periodically re-sends sprint/tactical-sprint input only.
+- A script cannot shorten a server-controlled revive timer. Quick Revive Hold Assist only holds the normal input, and with GCV guard enabled it requires a fresh REVIVE UI match.
 - Fast Loot cannot be fully context-safe from controller data alone. Use the guarded chord and Context Lock; the optional GCV guard adds UI-aware blocking after calibration.
 - With GCV disabled, parachute state is not present in controller data and the cut/redeploy sequence is manual. With GCV enabled, the explicit chord is accepted only on a fresh parachute-state match.
-- Rumble is not reliable weapon identification.
+- Rumble Profile Hint is a fallback profile selector, not reliable weapon identification. GCV weapon detection wins whenever it is fresh and confident.
 
 Activision states that unauthorized scripted input devices are prohibited and subject to detection/enforcement. Review the current policy before using this project online: [RICOCHET Anti-Cheat Season 04 update](https://www.callofduty.com/blog/2026/06/call-of-duty-black-ops-7-warzone-ricochet-anti-cheat-season-04).
 
