@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import re
 import struct
 import unittest
 from pathlib import Path
@@ -78,6 +79,7 @@ class ConfigTests(unittest.TestCase):
         source = (PROJECT_DIR / "wz.gpc").read_text(encoding="utf-8")
         self.assertIn("#define GCV_MAGIC              0x575A", source)
         self.assertIn("#define GCV_PROTOCOL_VERSION        1", source)
+        self.assertIn("#define GCV_UI_REVIVE                4", source)
         expected_reads = {
             0: "cv_magic",
             2: "cv_version",
@@ -108,6 +110,33 @@ class ConfigTests(unittest.TestCase):
             output,
             PROJECT_DIR / "templates" / "weapons" / "fg42",
         )
+
+    def test_gpc_interactive_config_offsets_do_not_overlap(self):
+        source = (PROJECT_DIR / "wz.gpc").read_text(encoding="utf-8")
+        blocks = re.findall(r"\[[^\]]+\]\n(?:[^\[]+?)(?=\n\[|</cfgdesc>)", source)
+        ranges = []
+        for block in blocks:
+            offset = re.search(r"byteoffset\s*=\s*(\d+)", block)
+            bitsize = re.search(r"bitsize\s*=\s*(\d+)", block)
+            if not offset or not bitsize:
+                continue
+            start = int(offset.group(1))
+            byte_count = int(bitsize.group(1)) // 8
+            title = block.splitlines()[0]
+            ranges.append((start, start + byte_count, title))
+
+        seen = {}
+        for start, end, title in ranges:
+            for byte in range(start, end):
+                self.assertNotIn(
+                    byte,
+                    seen,
+                    "PMEM byte %d is shared by %s and %s" %
+                    (byte, seen.get(byte), title),
+                )
+                seen[byte] = title
+
+        self.assertIn(135, seen)
 
 
 if __name__ == "__main__":
