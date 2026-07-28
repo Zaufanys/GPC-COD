@@ -85,8 +85,8 @@
 #define PM_REVIVE_ENABLE          120
 #define PM_REVIVE_HOLD_MS         124
 #define PM_RUMBLE_HINT_ENABLE     128
-#define PM_RUMBLE_LOW             129
-#define PM_RUMBLE_HIGH            130
+#define PM_RUMBLE_LOW             152
+#define PM_RUMBLE_HIGH            156
 #define PM_RUMBLE_PROFILE         131
 #define PM_RUMBLE_CONFIRM_MS      132
 #define PM_SPRINT_THRESHOLD       136
@@ -147,8 +147,8 @@ fix32 sprint_threshold = 92.0;
 uint8 revive_enable = FALSE;
 uint32 revive_hold_ms = 4500;
 uint8 rumble_hint_enable = FALSE;
-uint8 rumble_low = 20;
-uint8 rumble_high = 90;
+fix32 rumble_low = 20.0;
+fix32 rumble_high = 90.0;
 uint8 rumble_profile = 0;
 uint32 rumble_confirm_ms = 180;
 uint8 context_lock_default = FALSE;
@@ -477,8 +477,6 @@ void update_fire_timer() {
 
 void update_rumble_profile_hint() {
     fix32 sample = 0.0;
-    fix32 low_threshold = 0.0;
-    fix32 high_threshold = 0.0;
 
     if(!rumble_hint_enable || !is_active(ADS) || !is_active(FIRE)) {
         rumble_hint_clock = 0;
@@ -495,9 +493,7 @@ void update_rumble_profile_hint() {
     }
 
     sample = strongest_rumble();
-    low_threshold = rumble_low;
-    high_threshold = rumble_high;
-    if(sample >= low_threshold && sample <= high_threshold) {
+    if(sample >= rumble_low && sample <= rumble_high) {
         rumble_hint_clock += elapsed_time();
         if(rumble_hint_clock >= rumble_confirm_ms) {
             active_profile = rumble_profile;
@@ -1227,22 +1223,24 @@ default = 0
 item = Enable
 
 [Rumble Low Threshold]
-byteoffset = 129
-bitsize = 8
-control = spinbox
-default = 20
+byteoffset = 152
+bitsize = 32
+control = spinboxf
+default = 200
 minimum = 0
-maximum = 100
-step = 1
+maximum = 1000
+step = 10
+decimals = 1
 
 [Rumble High Threshold]
-byteoffset = 130
-bitsize = 8
-control = spinbox
-default = 90
+byteoffset = 156
+bitsize = 32
+control = spinboxf
+default = 900
 minimum = 0
-maximum = 100
-step = 1
+maximum = 1000
+step = 10
+decimals = 1
 
 [Rumble Hint Profile]
 byteoffset = 131
