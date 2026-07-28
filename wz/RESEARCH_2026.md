@@ -18,8 +18,8 @@ The project consolidates these names into four explicit, testable right-stick al
 
 | Idea | Finding |
 |---|---|
-| Boosted sprint | A controller script can initiate or refresh sprint/tactical sprint sooner, but it cannot raise the game/server movement-speed cap. |
-| Auto tactical sprint | Viable, but Warzone's native Tactical Sprint Assist with delay 0 is the first choice. |
+| Boosted sprint | A controller script can initiate or refresh sprint, but it cannot raise the game/server movement-speed cap. Tactical sprint requires the Sprinter perk in current Warzone. |
+| Script sprint fallback | Viable, but Warzone's native Sprint Assist with delay 0 is the first choice. |
 | Slide sequences | Viable, patch-sensitive, and dependent on the in-game slide/dive behavior. |
 | Snake | Viable as an explicit lateral pattern; it should not silently alter normal movement. |
 | Fast loot | Risky because Use/Reload is also used for reloads, loadouts, shops, and revives. It needs a chord, hold threshold, manual Context Lock, and optional CV guard. |
@@ -29,6 +29,9 @@ The project consolidates these names into four explicit, testable right-stick al
 | Parachute cut/redeploy | A manual sequence is viable. Automatic state awareness needs video because ordinary controller data has no parachute state. |
 
 Season 05 also changes the loot flow with Supply Drones and airborne Buy Station deliveries, which makes conservative shared-input handling more important. [Official Season 05 patch notes](https://www.callofduty.com/patchnotes/2026/07/call-of-duty-bo7-warzone-season-05-patch-notes)
+
+The current movement model removed tactical sprint as a universal base ability
+and grants it through the Sprinter perk. [Official Warzone Season 01 movement notes](https://www.callofduty.com/patchnotes/2025/12/call-of-duty-bo7-warzone-season-01-patch-notes)
 
 ## Current recoil facts
 
