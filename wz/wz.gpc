@@ -17,6 +17,7 @@
       ADS + D-Pad Right : next recoil profile
       ADS + D-Pad Left  : previous recoil profile
       ADS + D-Pad Down  : toggle Context Lock
+      D-Pad Up + Use    : guarded revive hold, when enabled/GCV-confirmed
 
     Context Lock disables movement and action helpers. Use it before Buy
     Stations, loadout menus, inventory screens, or other shared-input UI.
@@ -80,10 +81,19 @@
 #define PM_GCV_CONTEXT_GUARD      107
 #define PM_GCV_STALE_MS           108
 #define PM_GCV_MIN_CONFIDENCE     112
+#define PM_SPRINT_REFRESH_MS      116
+#define PM_REVIVE_ENABLE          120
+#define PM_REVIVE_HOLD_MS         124
+#define PM_RUMBLE_HINT_ENABLE     128
+#define PM_RUMBLE_LOW             129
+#define PM_RUMBLE_HIGH            130
+#define PM_RUMBLE_PROFILE         131
+#define PM_RUMBLE_CONFIRM_MS      132
 
 #define GCV_MAGIC              0x575A
 #define GCV_PROTOCOL_VERSION        1
 #define GCV_UI_GAMEPLAY              0
+#define GCV_UI_REVIVE                4
 #define GCV_UI_PARACHUTE             5
 #define GCV_UI_UNKNOWN             255
 #define GCV_FLAG_TEMPLATES_READY  0x02
@@ -128,6 +138,14 @@ uint8 parachute_enable = FALSE;
 uint32 loot_hold_ms = 220;
 uint32 plate_hold_ms = 2200;
 uint32 parachute_freefall_ms = 600;
+uint32 sprint_refresh_ms = 900;
+uint8 revive_enable = FALSE;
+uint32 revive_hold_ms = 4500;
+uint8 rumble_hint_enable = FALSE;
+uint8 rumble_low = 20;
+uint8 rumble_high = 90;
+uint8 rumble_profile = 0;
+uint32 rumble_confirm_ms = 180;
 uint8 context_lock_default = FALSE;
 uint8 gcv_enable = FALSE;
 uint8 gcv_auto_profile = FALSE;
@@ -144,6 +162,8 @@ uint32 snake_clock = 0;
 uint8 aim_phase = 0;
 uint8 rotational_phase = 0;
 int8 snake_direction = 1;
+uint32 sprint_refresh_clock = 0;
+uint32 rumble_hint_clock = 0;
 fix32 previous_look_x = 0.0;
 fix32 previous_look_y = 0.0;
 
@@ -200,6 +220,14 @@ init {
     pmem_read(PM_LOOT_HOLD_MS, &loot_hold_ms);
     pmem_read(PM_PLATE_HOLD_MS, &plate_hold_ms);
     pmem_read(PM_PARACHUTE_FREEFALL_MS, &parachute_freefall_ms);
+    pmem_read(PM_SPRINT_REFRESH_MS, &sprint_refresh_ms);
+    pmem_read(PM_REVIVE_ENABLE, &revive_enable);
+    pmem_read(PM_REVIVE_HOLD_MS, &revive_hold_ms);
+    pmem_read(PM_RUMBLE_HINT_ENABLE, &rumble_hint_enable);
+    pmem_read(PM_RUMBLE_LOW, &rumble_low);
+    pmem_read(PM_RUMBLE_HIGH, &rumble_high);
+    pmem_read(PM_RUMBLE_PROFILE, &rumble_profile);
+    pmem_read(PM_RUMBLE_CONFIRM_MS, &rumble_confirm_ms);
     pmem_read(PM_CONTEXT_LOCK_DEFAULT, &context_lock_default);
     pmem_read(PM_GCV_ENABLE, &gcv_enable);
     pmem_read(PM_GCV_AUTO_PROFILE, &gcv_auto_profile);
@@ -210,6 +238,7 @@ init {
     active_profile = clamp(active_profile, 0, 2);
     aim_mode = clamp(aim_mode, 0, 4);
     aim_activation = clamp(aim_activation, 0, 1);
+    sprint_mode = clamp(sprint_mode, 0, 2);
     aim_radius = clamp(aim_radius, 0.0, 20.0);
     aim_interval = clamp(aim_interval, 4, 100);
     aim_deadzone = clamp(aim_deadzone, 0.0, 100.0);
@@ -222,6 +251,12 @@ init {
     loot_hold_ms = clamp(loot_hold_ms, 100, 1000);
     plate_hold_ms = clamp(plate_hold_ms, 500, 5000);
     parachute_freefall_ms = clamp(parachute_freefall_ms, 150, 2000);
+    sprint_refresh_ms = clamp(sprint_refresh_ms, 250, 3000);
+    revive_hold_ms = clamp(revive_hold_ms, 1000, 10000);
+    rumble_low = clamp(rumble_low, 0, 100);
+    rumble_high = clamp(rumble_high, rumble_low, 100);
+    rumble_profile = clamp(rumble_profile, 0, 2);
+    rumble_confirm_ms = clamp(rumble_confirm_ms, 40, 1000);
     gcv_stale_ms = clamp(gcv_stale_ms, 25, 1000);
     gcv_min_confidence = clamp(gcv_min_confidence, 0, 100);
 
@@ -252,6 +287,7 @@ main {
     if(master_enable) {
         update_gcv_state();
         update_fire_timer();
+        update_rumble_profile_hint();
 
         if(combat_aim_active()) {
             if(aim_mode) apply_aim_engine();
@@ -270,13 +306,14 @@ main {
             combo_stop(AutoSprintDoubleTap);
         }
 
-        if(!action_context_blocked()) {
+        if(!action_context_blocked() || revive_helper_context()) {
             run_action_helpers();
         }
         else {
             combo_stop(LootPulse);
             combo_stop(PlateHold);
             combo_stop(ParachuteCycle);
+            combo_stop(ReviveHold);
         }
 
         previous_look_x = get_actual(LOOK_X);
@@ -340,6 +377,18 @@ bool action_context_blocked() {
     return FALSE;
 }
 
+bool revive_helper_context() {
+    if(context_lock || !revive_enable) return FALSE;
+    if(!is_active(DPAD_UP) || !is_active(USE_RELOAD)) return FALSE;
+    if(is_active(ADS) || is_active(FIRE)) return FALSE;
+
+    if(gcv_enable && gcv_context_guard) {
+        return gcv_packet_fresh() && (cv_flags & GCV_FLAG_TEMPLATES_READY) &&
+               cv_ui_state == GCV_UI_REVIVE;
+    }
+    return TRUE;
+}
+
 void update_fire_timer() {
     if(is_active(FIRE)) {
         if(!fire_was_active) fire_time = 0;
@@ -351,6 +400,49 @@ void update_fire_timer() {
         fire_time = 0;
     }
     return;
+}
+
+void update_rumble_profile_hint() {
+    uint8 sample = 0;
+
+    if(!rumble_hint_enable || !is_active(ADS) || !is_active(FIRE)) {
+        rumble_hint_clock = 0;
+        return;
+    }
+
+    // Prefer the calibrated GCV weapon result when it is available. Rumble is a
+    // fallback hint only because explosions, damage, and platform effects share
+    // the same vibration channel.
+    if(gcv_auto_profile && gcv_packet_fresh() && (cv_flags & GCV_FLAG_WEAPON_KNOWN) &&
+       cv_confidence >= gcv_min_confidence) {
+        rumble_hint_clock = 0;
+        return;
+    }
+
+    sample = strongest_rumble();
+    if(sample >= rumble_low && sample <= rumble_high) {
+        rumble_hint_clock += get_rtime();
+        if(rumble_hint_clock >= rumble_confirm_ms) {
+            active_profile = rumble_profile;
+        }
+    }
+    else {
+        rumble_hint_clock = 0;
+    }
+    return;
+}
+
+uint8 strongest_rumble() {
+    uint8 a = get_rumble(RUMBLE_A);
+    uint8 b = get_rumble(RUMBLE_B);
+    uint8 rt = get_rumble(RUMBLE_RT);
+    uint8 lt = get_rumble(RUMBLE_LT);
+    uint8 strongest = a;
+
+    if(b > strongest) strongest = b;
+    if(rt > strongest) strongest = rt;
+    if(lt > strongest) strongest = lt;
+    return strongest;
 }
 
 bool combat_aim_active() {
@@ -473,16 +565,24 @@ void offset_axis(uint8 axis, fix32 amount) {
 void run_movement_helpers() {
     fix32 forward = get_actual(MOVE_Y);
 
-    // Titan cannot raise Warzone's movement-speed cap. This only initiates the
-    // game's sprint/tactical-sprint action sooner.
+    // Titan cannot raise Warzone's movement-speed cap. The refresh mode is the
+    // re-added "boosted sprint" lane: it only re-sends sprint/tac-sprint input.
     if(sprint_enable && forward < -92.0 && !is_active(ADS) && !is_active(FIRE) &&
        !is_active(STANCE) && !is_active(USE_RELOAD) && !is_active(SWAP_PLATE)) {
         if(sprint_mode == 0) combo_run(AutoSprintPress);
-        else combo_run(AutoSprintDoubleTap);
+        else if(sprint_mode == 1) combo_run(AutoSprintDoubleTap);
+        else {
+            sprint_refresh_clock += get_rtime();
+            if(sprint_refresh_clock >= sprint_refresh_ms) {
+                sprint_refresh_clock = 0;
+                combo_run(AutoSprintDoubleTap);
+            }
+        }
     }
     else {
         combo_stop(AutoSprintPress);
         combo_stop(AutoSprintDoubleTap);
+        sprint_refresh_clock = 0;
     }
 
     if(slide_mode && event_active(STANCE) && forward < -35.0) {
@@ -509,6 +609,7 @@ void run_movement_helpers() {
 
 void run_action_helpers() {
     bool action_chord = is_active(DPAD_LEFT);
+    bool revive_chord = is_active(DPAD_UP);
 
     // Safe default: require D-Pad Left + Use/Reload. Direct long-hold mode is
     // available in cfgdesc but should only be used with Context Lock discipline.
@@ -537,6 +638,16 @@ void run_action_helpers() {
         set_val(DPAD_LEFT, 0.0);
         set_val(JUMP, 0.0);
     }
+
+    // Quick Revive Hold Assist holds the normal revive/interact input. It does
+    // not shorten any server-side timer.
+    if(revive_enable && revive_chord && event_active(USE_RELOAD) &&
+       !is_active(ADS) && !is_active(FIRE) &&
+       (!gcv_enable || (gcv_packet_fresh() && cv_ui_state == GCV_UI_REVIVE))) {
+        combo_run(ReviveHold);
+        set_val(DPAD_UP, 0.0);
+        set_val(USE_RELOAD, 0.0);
+    }
     return;
 }
 
@@ -555,11 +666,14 @@ void reset_runtime() {
     combo_stop(LootPulse);
     combo_stop(PlateHold);
     combo_stop(ParachuteCycle);
+    combo_stop(ReviveHold);
     fire_was_active = FALSE;
     fire_time = 0;
     aim_clock = 0;
     rotational_clock = 0;
     snake_clock = 0;
+    sprint_refresh_clock = 0;
+    rumble_hint_clock = 0;
     cv_age_ms = 60000;
     return;
 }
@@ -627,6 +741,13 @@ combo ParachuteCycle {
     wait(55);
     set_val(JUMP, 0.0);
     wait(120);
+}
+
+combo ReviveHold {
+    set_val(USE_RELOAD, 100.0);
+    wait(revive_hold_ms);
+    set_val(USE_RELOAD, 0.0);
+    wait(80);
 }
 
 /*
@@ -860,6 +981,7 @@ control = combobox
 default = 0
 item = Press
 item = Double Tap
+item = Boosted Sprint Refresh
 
 [Slide Sequence]
 byteoffset = 74
@@ -964,6 +1086,77 @@ default = 600
 minimum = 150
 maximum = 2000
 step = 25
+
+[Boosted Sprint Refresh Time]
+shortdesc = Refresh-mode spacing in ms. This only re-sends sprint/tactical-sprint input; it cannot exceed movement speed caps.
+byteoffset = 116
+bitsize = 32
+control = spinbox
+default = 900
+minimum = 250
+maximum = 3000
+step = 25
+
+[Quick Revive Hold Assist]
+shortdesc = D-Pad Up + Use/Reload. Holds normal revive/interact input; it does not shorten server timers.
+byteoffset = 120
+bitsize = 8
+control = checkbox
+default = 0
+item = Enable
+
+[Quick Revive Hold Time]
+byteoffset = 124
+bitsize = 32
+control = spinbox
+default = 4500
+minimum = 1000
+maximum = 10000
+step = 100
+
+[Rumble Profile Hint]
+shortdesc = Fallback only. Selects one recoil profile after a calibrated rumble window while ADS + Fire.
+byteoffset = 128
+bitsize = 8
+control = checkbox
+default = 0
+item = Enable
+
+[Rumble Low Threshold]
+byteoffset = 129
+bitsize = 8
+control = spinbox
+default = 20
+minimum = 0
+maximum = 100
+step = 1
+
+[Rumble High Threshold]
+byteoffset = 130
+bitsize = 8
+control = spinbox
+default = 90
+minimum = 0
+maximum = 100
+step = 1
+
+[Rumble Hint Profile]
+byteoffset = 131
+bitsize = 8
+control = combobox
+default = 0
+item = Profile 1 - FG42 / Manual
+item = Profile 2 - AN-94 / Manual
+item = Profile 3 - Voyak KT-3 / Manual
+
+[Rumble Confirm Time]
+byteoffset = 132
+bitsize = 32
+control = spinbox
+default = 180
+minimum = 40
+maximum = 1000
+step = 10
 
 [Start With Context Lock]
 shortdesc = Context Lock blocks all movement and action helpers. Toggle with ADS + D-Pad Down.
