@@ -1,0 +1,122 @@
+{
+  "protocol_version": 1,
+  "target_process_fps": 120,
+  "fps_window": 90,
+  "debug_overlay": true,
+  "groups": [
+    {
+      "name": "weapon",
+      "unknown_id": 0,
+      "roi": [0.72, 0.76, 1.0, 1.0],
+      "target_size": [256, 128],
+      "method": "edge",
+      "threshold": 0.82,
+      "check_every": 2,
+      "confirm_frames": 2,
+      "hold_frames": 20,
+      "items": [
+        {
+          "id": 1,
+          "name": "FG42",
+          "profile": 0,
+          "templates": ["templates/weapons/fg42/*.png"]
+        },
+        {
+          "id": 2,
+          "name": "AN-94",
+          "profile": 1,
+          "templates": ["templates/weapons/an94/*.png"]
+        },
+        {
+          "id": 3,
+          "name": "VOYAK_KT3",
+          "profile": 2,
+          "templates": ["templates/weapons/voyak_kt3/*.png"]
+        },
+        {
+          "id": 4,
+          "name": "SWORDFISH_A1",
+          "profile": 255,
+          "templates": ["templates/weapons/swordfish_a1/*.png"]
+        }
+      ]
+    },
+    {
+      "name": "optic",
+      "unknown_id": 0,
+      "roi": [0.22, 0.1, 0.78, 0.9],
+      "target_size": [256, 192],
+      "method": "edge",
+      "threshold": 0.8,
+      "check_every": 4,
+      "confirm_frames": 2,
+      "hold_frames": 12,
+      "items": [
+        {
+          "id": 1,
+          "name": "IRON",
+          "templates": ["templates/optics/iron/*.png"]
+        },
+        {
+          "id": 2,
+          "name": "REFLEX",
+          "templates": ["templates/optics/reflex/*.png"]
+        },
+        {
+          "id": 3,
+          "name": "MAGNIFIED",
+          "templates": ["templates/optics/magnified/*.png"]
+        }
+      ]
+    },
+    {
+      "name": "ui",
+      "unknown_id": 255,
+      "roi": [0.0, 0.0, 1.0, 1.0],
+      "target_size": [320, 180],
+      "method": "edge",
+      "threshold": 0.8,
+      "check_every": 1,
+      "confirm_frames": 1,
+      "hold_frames": 2,
+      "items": [
+        {
+          "id": 1,
+          "name": "BUY_STATION",
+          "roi": [0.0, 0.0, 0.48, 0.28],
+          "templates": ["templates/ui/buy_station/*.png"]
+        },
+        {
+          "id": 2,
+          "name": "LOADOUT",
+          "roi": [0.0, 0.0, 0.55, 0.3],
+          "templates": ["templates/ui/loadout/*.png"]
+        },
+        {
+          "id": 3,
+          "name": "INVENTORY",
+          "roi": [0.0, 0.65, 1.0, 1.0],
+          "templates": ["templates/ui/inventory/*.png"]
+        },
+        {
+          "id": 4,
+          "name": "REVIVE",
+          "roi": [0.28, 0.56, 0.72, 0.9],
+          "templates": ["templates/ui/revive/*.png"]
+        },
+        {
+          "id": 5,
+          "name": "PARACHUTE",
+          "roi": [0.28, 0.55, 0.72, 0.92],
+          "templates": ["templates/ui/parachute/*.png"]
+        },
+        {
+          "id": 6,
+          "name": "RELOAD",
+          "roi": [0.3, 0.5, 0.7, 0.82],
+          "templates": ["templates/ui/reload/*.png"]
+        }
+      ]
+    }
+  ]
+}

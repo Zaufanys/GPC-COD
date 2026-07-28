@@ -1,0 +1,1021 @@
+#pragma METAINFO("WZ Core", 0, 1, "Zaufanys")
+
+/*
+    WZ Core v0.1
+    Native Titan Two / GPC2 foundation for Call of Duty: Warzone.
+
+    Default controller mapping:
+      FIRE       BUTTON_5   RT / R2
+      ADS        BUTTON_8   LT / L2
+      SPRINT     BUTTON_9   LS / L3
+      JUMP       BUTTON_16  A / Cross
+      STANCE     BUTTON_15  B / Circle
+      SWAP/PLATE BUTTON_14  Y / Triangle
+      USE/RELOAD BUTTON_17  X / Square
+
+    Runtime controls:
+      ADS + D-Pad Right : next recoil profile
+      ADS + D-Pad Left  : previous recoil profile
+      ADS + D-Pad Down  : toggle Context Lock
+
+    Context Lock disables movement and action helpers. Use it before Buy
+    Stations, loadout menus, inventory screens, or other shared-input UI.
+*/
+
+#define FIRE            BUTTON_5
+#define ADS             BUTTON_8
+#define SPRINT          BUTTON_9
+#define JUMP            BUTTON_16
+#define STANCE          BUTTON_15
+#define SWAP_PLATE      BUTTON_14
+#define USE_RELOAD      BUTTON_17
+#define DPAD_UP         BUTTON_10
+#define DPAD_DOWN       BUTTON_11
+#define DPAD_LEFT       BUTTON_12
+#define DPAD_RIGHT      BUTTON_13
+#define LOOK_X          STICK_1_X
+#define LOOK_Y          STICK_1_Y
+#define MOVE_X          STICK_2_X
+#define MOVE_Y          STICK_2_Y
+
+// Persistent-memory layout. Keep these offsets synchronized with cfgdesc.
+#define PM_MASTER                   0
+#define PM_PROFILE                  1
+#define PM_AIM_MODE                 2
+#define PM_AIM_ACTIVATION           3
+#define PM_AIM_RADIUS               4
+#define PM_AIM_INTERVAL             8
+#define PM_AIM_DEADZONE            12
+#define PM_ROTATIONAL              16
+#define PM_ROTATIONAL_RADIUS       20
+#define PM_ROTATIONAL_INTERVAL     24
+#define PM_AR_ENABLE               28
+#define PM_AR_BOOST_MS             32
+#define PM_P1_VERTICAL             36
+#define PM_P1_HORIZONTAL           40
+#define PM_P1_BOOST                44
+#define PM_P2_VERTICAL             48
+#define PM_P2_HORIZONTAL           52
+#define PM_P2_BOOST                56
+#define PM_P3_VERTICAL             60
+#define PM_P3_HORIZONTAL           64
+#define PM_P3_BOOST                68
+#define PM_SPRINT_ENABLE           72
+#define PM_SPRINT_MODE             73
+#define PM_SLIDE_MODE              74
+#define PM_SNAKE_ENABLE            75
+#define PM_SLIDE_DELAY             76
+#define PM_SNAKE_STRENGTH          80
+#define PM_SNAKE_INTERVAL          84
+#define PM_LOOT_ENABLE             88
+#define PM_LOOT_ACTIVATION         89
+#define PM_PLATE_ENABLE            90
+#define PM_PARACHUTE_ENABLE        91
+#define PM_LOOT_HOLD_MS            92
+#define PM_PLATE_HOLD_MS           96
+#define PM_PARACHUTE_FREEFALL_MS  100
+#define PM_CONTEXT_LOCK_DEFAULT   104
+#define PM_GCV_ENABLE             105
+#define PM_GCV_AUTO_PROFILE       106
+#define PM_GCV_CONTEXT_GUARD      107
+#define PM_GCV_STALE_MS           108
+#define PM_GCV_MIN_CONFIDENCE     112
+
+#define GCV_MAGIC              0x575A
+#define GCV_PROTOCOL_VERSION        1
+#define GCV_UI_GAMEPLAY              0
+#define GCV_UI_PARACHUTE             5
+#define GCV_UI_UNKNOWN             255
+#define GCV_FLAG_TEMPLATES_READY  0x02
+#define GCV_FLAG_WEAPON_KNOWN     0x08
+
+uint8 master_enable = TRUE;
+uint8 active_profile = 0;
+uint8 aim_mode = 0;
+uint8 aim_activation = 0;
+fix32 aim_radius = 4.0;
+uint32 aim_interval = 16;
+fix32 aim_deadzone = 20.0;
+
+uint8 rotational_enable = FALSE;
+fix32 rotational_radius = 3.0;
+uint32 rotational_interval = 40;
+
+uint8 anti_recoil_enable = FALSE;
+uint32 recoil_boost_ms = 120;
+fix32 p1_vertical = 0.0;
+fix32 p1_horizontal = 0.0;
+fix32 p1_boost = 0.0;
+fix32 p2_vertical = 0.0;
+fix32 p2_horizontal = 0.0;
+fix32 p2_boost = 0.0;
+fix32 p3_vertical = 0.0;
+fix32 p3_horizontal = 0.0;
+fix32 p3_boost = 0.0;
+
+uint8 sprint_enable = FALSE;
+uint8 sprint_mode = 0;
+uint8 slide_mode = 0;
+uint8 snake_enable = FALSE;
+uint32 slide_delay = 180;
+fix32 snake_strength = 18.0;
+uint32 snake_interval = 90;
+
+uint8 loot_enable = FALSE;
+uint8 loot_activation = 1;
+uint8 plate_enable = FALSE;
+uint8 parachute_enable = FALSE;
+uint32 loot_hold_ms = 220;
+uint32 plate_hold_ms = 2200;
+uint32 parachute_freefall_ms = 600;
+uint8 context_lock_default = FALSE;
+uint8 gcv_enable = FALSE;
+uint8 gcv_auto_profile = FALSE;
+uint8 gcv_context_guard = TRUE;
+uint32 gcv_stale_ms = 100;
+uint8 gcv_min_confidence = 82;
+
+bool context_lock = FALSE;
+bool fire_was_active = FALSE;
+uint32 fire_time = 0;
+uint32 aim_clock = 0;
+uint32 rotational_clock = 0;
+uint32 snake_clock = 0;
+uint8 aim_phase = 0;
+uint8 rotational_phase = 0;
+int8 snake_direction = 1;
+fix32 previous_look_x = 0.0;
+fix32 previous_look_y = 0.0;
+
+// GCV packet v1 (16 bytes, little-endian).
+uint16 cv_magic = 0;
+uint8 cv_version = 0;
+uint8 cv_flags = 0;
+uint16 cv_sequence = 0;
+uint16 cv_process_ms = 0;
+uint16 cv_capture_fps_x10 = 0;
+uint8 cv_weapon_id = 0;
+uint8 cv_optic_id = 0;
+uint8 cv_ui_state = GCV_UI_UNKNOWN;
+uint8 cv_confidence = 0;
+uint8 cv_profile = 255;
+uint8 cv_reserved = 0;
+uint32 cv_age_ms = 60000;
+
+init {
+    pmem_load();
+
+    pmem_read(PM_MASTER, &master_enable);
+    pmem_read(PM_PROFILE, &active_profile);
+    pmem_read(PM_AIM_MODE, &aim_mode);
+    pmem_read(PM_AIM_ACTIVATION, &aim_activation);
+    pmem_read(PM_AIM_RADIUS, &aim_radius);
+    pmem_read(PM_AIM_INTERVAL, &aim_interval);
+    pmem_read(PM_AIM_DEADZONE, &aim_deadzone);
+    pmem_read(PM_ROTATIONAL, &rotational_enable);
+    pmem_read(PM_ROTATIONAL_RADIUS, &rotational_radius);
+    pmem_read(PM_ROTATIONAL_INTERVAL, &rotational_interval);
+    pmem_read(PM_AR_ENABLE, &anti_recoil_enable);
+    pmem_read(PM_AR_BOOST_MS, &recoil_boost_ms);
+    pmem_read(PM_P1_VERTICAL, &p1_vertical);
+    pmem_read(PM_P1_HORIZONTAL, &p1_horizontal);
+    pmem_read(PM_P1_BOOST, &p1_boost);
+    pmem_read(PM_P2_VERTICAL, &p2_vertical);
+    pmem_read(PM_P2_HORIZONTAL, &p2_horizontal);
+    pmem_read(PM_P2_BOOST, &p2_boost);
+    pmem_read(PM_P3_VERTICAL, &p3_vertical);
+    pmem_read(PM_P3_HORIZONTAL, &p3_horizontal);
+    pmem_read(PM_P3_BOOST, &p3_boost);
+    pmem_read(PM_SPRINT_ENABLE, &sprint_enable);
+    pmem_read(PM_SPRINT_MODE, &sprint_mode);
+    pmem_read(PM_SLIDE_MODE, &slide_mode);
+    pmem_read(PM_SNAKE_ENABLE, &snake_enable);
+    pmem_read(PM_SLIDE_DELAY, &slide_delay);
+    pmem_read(PM_SNAKE_STRENGTH, &snake_strength);
+    pmem_read(PM_SNAKE_INTERVAL, &snake_interval);
+    pmem_read(PM_LOOT_ENABLE, &loot_enable);
+    pmem_read(PM_LOOT_ACTIVATION, &loot_activation);
+    pmem_read(PM_PLATE_ENABLE, &plate_enable);
+    pmem_read(PM_PARACHUTE_ENABLE, &parachute_enable);
+    pmem_read(PM_LOOT_HOLD_MS, &loot_hold_ms);
+    pmem_read(PM_PLATE_HOLD_MS, &plate_hold_ms);
+    pmem_read(PM_PARACHUTE_FREEFALL_MS, &parachute_freefall_ms);
+    pmem_read(PM_CONTEXT_LOCK_DEFAULT, &context_lock_default);
+    pmem_read(PM_GCV_ENABLE, &gcv_enable);
+    pmem_read(PM_GCV_AUTO_PROFILE, &gcv_auto_profile);
+    pmem_read(PM_GCV_CONTEXT_GUARD, &gcv_context_guard);
+    pmem_read(PM_GCV_STALE_MS, &gcv_stale_ms);
+    pmem_read(PM_GCV_MIN_CONFIDENCE, &gcv_min_confidence);
+
+    active_profile = clamp(active_profile, 0, 2);
+    aim_mode = clamp(aim_mode, 0, 4);
+    aim_activation = clamp(aim_activation, 0, 1);
+    aim_radius = clamp(aim_radius, 0.0, 20.0);
+    aim_interval = clamp(aim_interval, 4, 100);
+    aim_deadzone = clamp(aim_deadzone, 0.0, 100.0);
+    rotational_radius = clamp(rotational_radius, 0.0, 15.0);
+    rotational_interval = clamp(rotational_interval, 10, 200);
+    recoil_boost_ms = clamp(recoil_boost_ms, 0, 1000);
+    slide_delay = clamp(slide_delay, 50, 600);
+    snake_strength = clamp(snake_strength, 0.0, 50.0);
+    snake_interval = clamp(snake_interval, 30, 500);
+    loot_hold_ms = clamp(loot_hold_ms, 100, 1000);
+    plate_hold_ms = clamp(plate_hold_ms, 500, 5000);
+    parachute_freefall_ms = clamp(parachute_freefall_ms, 150, 2000);
+    gcv_stale_ms = clamp(gcv_stale_ms, 25, 1000);
+    gcv_min_confidence = clamp(gcv_min_confidence, 0, 100);
+
+    context_lock = context_lock_default;
+}
+
+main {
+    // Runtime profile switching.
+    if(is_active(ADS) && event_active(DPAD_RIGHT)) {
+        active_profile = (active_profile + 1) % 3;
+        save_profile();
+        set_val(DPAD_RIGHT, 0.0);
+    }
+    if(is_active(ADS) && event_active(DPAD_LEFT)) {
+        if(active_profile == 0) active_profile = 2;
+        else active_profile--;
+        save_profile();
+        set_val(DPAD_LEFT, 0.0);
+    }
+
+    // Context Lock is the manual protection for shops, loadouts, inventory,
+    // revives, reloads and other screens that share controller inputs.
+    if(is_active(ADS) && event_active(DPAD_DOWN)) {
+        context_lock = !context_lock;
+        set_val(DPAD_DOWN, 0.0);
+    }
+
+    if(master_enable) {
+        update_gcv_state();
+        update_fire_timer();
+
+        if(combat_aim_active()) {
+            if(aim_mode) apply_aim_engine();
+            if(rotational_enable) apply_rotational_engine();
+        }
+
+        if(anti_recoil_enable && is_active(ADS) && is_active(FIRE)) {
+            apply_anti_recoil();
+        }
+
+        if(!context_lock) {
+            run_movement_helpers();
+        }
+        else {
+            combo_stop(AutoSprintPress);
+            combo_stop(AutoSprintDoubleTap);
+        }
+
+        if(!action_context_blocked()) {
+            run_action_helpers();
+        }
+        else {
+            combo_stop(LootPulse);
+            combo_stop(PlateHold);
+            combo_stop(ParachuteCycle);
+        }
+
+        previous_look_x = get_actual(LOOK_X);
+        previous_look_y = get_actual(LOOK_Y);
+    }
+    else {
+        reset_runtime();
+    }
+}
+
+void update_gcv_state() {
+    if(gcv_enable && gcv_ready()) {
+        gcv_read(0, &cv_magic);
+        gcv_read(2, &cv_version);
+        gcv_read(3, &cv_flags);
+        gcv_read(4, &cv_sequence);
+        gcv_read(6, &cv_process_ms);
+        gcv_read(8, &cv_capture_fps_x10);
+        gcv_read(10, &cv_weapon_id);
+        gcv_read(11, &cv_optic_id);
+        gcv_read(12, &cv_ui_state);
+        gcv_read(13, &cv_confidence);
+        gcv_read(14, &cv_profile);
+        gcv_read(15, &cv_reserved);
+
+        if(cv_magic == GCV_MAGIC && cv_version == GCV_PROTOCOL_VERSION) {
+            cv_age_ms = 0;
+
+            // Do not write PMEM for automatic weapon swaps. This avoids flash
+            // wear and leaves the user's manually selected startup profile.
+            if(gcv_auto_profile && (cv_flags & GCV_FLAG_WEAPON_KNOWN) &&
+               cv_confidence >= gcv_min_confidence && cv_profile <= 2) {
+                active_profile = cv_profile;
+            }
+            return;
+        }
+    }
+    if(cv_age_ms < 60000) {
+        cv_age_ms += get_rtime();
+    }
+    return;
+}
+
+bool gcv_packet_fresh() {
+    return gcv_enable && cv_magic == GCV_MAGIC &&
+           cv_version == GCV_PROTOCOL_VERSION && cv_age_ms <= gcv_stale_ms;
+}
+
+bool action_context_blocked() {
+    if(context_lock) return TRUE;
+
+    // Fail safe for action helpers only. A stale/unknown CV frame never
+    // suppresses the player's raw controller or the combat pipeline.
+    if(gcv_enable && gcv_context_guard) {
+        if(!gcv_packet_fresh()) return TRUE;
+        if(!(cv_flags & GCV_FLAG_TEMPLATES_READY)) return TRUE;
+        if(cv_ui_state != GCV_UI_GAMEPLAY && cv_ui_state != GCV_UI_PARACHUTE) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+void update_fire_timer() {
+    if(is_active(FIRE)) {
+        if(!fire_was_active) fire_time = 0;
+        fire_time += get_rtime();
+        fire_was_active = TRUE;
+    }
+    else {
+        fire_was_active = FALSE;
+        fire_time = 0;
+    }
+    return;
+}
+
+bool combat_aim_active() {
+    if(!is_active(ADS)) return FALSE;
+    if(aim_activation && !is_active(FIRE)) return FALSE;
+    return TRUE;
+}
+
+void apply_aim_engine() {
+    fix32 dx = 0.0;
+    fix32 dy = 0.0;
+    fix32 rx = get_actual(LOOK_X);
+    fix32 ry = get_actual(LOOK_Y);
+    fix32 velocity = abs(rx - previous_look_x) + abs(ry - previous_look_y);
+    fix32 radius = aim_radius;
+
+    aim_clock += get_rtime();
+    if(aim_clock >= aim_interval) {
+        aim_clock = 0;
+        aim_phase = (aim_phase + 1) % 8;
+    }
+
+    // Preserve deliberate right-stick aim outside the configured release point.
+    if(sqrt((rx * rx) + (ry * ry)) > aim_deadzone) return;
+
+    // Velocity mode scales the same micro-pattern with physical stick speed.
+    if(aim_mode == 3) radius += clamp(velocity * 0.18, 0.0, aim_radius);
+
+    if(aim_mode == 2) {
+        // Shake: alternating horizontal micro-input. Intentionally simple and
+        // available for comparison; Polar/Sticky are the safer starting points.
+        if(aim_phase & 1) dx = radius;
+        else dx = -radius;
+    }
+    else if(aim_mode == 4) {
+        // Sticky: a compact four-point pattern.
+        switch(aim_phase % 4) {
+            case 0: dx =  radius; break;
+            case 1: dy =  radius; break;
+            case 2: dx = -radius; break;
+            case 3: dy = -radius; break;
+        }
+    }
+    else {
+        // Polar and Velocity: eight-point octagonal approximation.
+        switch(aim_phase) {
+            case 0: dx =  radius;              break;
+            case 1: dx =  radius * 0.707; dy =  radius * 0.707; break;
+            case 2:                    dy =  radius;              break;
+            case 3: dx = -radius * 0.707; dy =  radius * 0.707; break;
+            case 4: dx = -radius;              break;
+            case 5: dx = -radius * 0.707; dy = -radius * 0.707; break;
+            case 6:                    dy = -radius;              break;
+            case 7: dx =  radius * 0.707; dy = -radius * 0.707; break;
+        }
+    }
+
+    offset_axis(LOOK_X, dx);
+    offset_axis(LOOK_Y, dy);
+    return;
+}
+
+void apply_rotational_engine() {
+    fix32 lx = get_actual(MOVE_X);
+    fix32 ly = get_actual(MOVE_Y);
+
+    // Do not fight meaningful player movement.
+    if(sqrt((lx * lx) + (ly * ly)) > 18.0) return;
+
+    rotational_clock += get_rtime();
+    if(rotational_clock >= rotational_interval) {
+        rotational_clock = 0;
+        rotational_phase = (rotational_phase + 1) % 4;
+    }
+
+    switch(rotational_phase) {
+        case 0: offset_axis(MOVE_X,  rotational_radius); break;
+        case 1: offset_axis(MOVE_Y,  rotational_radius); break;
+        case 2: offset_axis(MOVE_X, -rotational_radius); break;
+        case 3: offset_axis(MOVE_Y, -rotational_radius); break;
+    }
+    return;
+}
+
+void apply_anti_recoil() {
+    fix32 vertical = profile_vertical();
+    fix32 horizontal = profile_horizontal();
+
+    if(fire_time <= recoil_boost_ms) vertical += profile_boost();
+
+    offset_axis(LOOK_X, horizontal);
+    offset_axis(LOOK_Y, vertical);
+    return;
+}
+
+fix32 profile_vertical() {
+    if(active_profile == 1) return p2_vertical;
+    if(active_profile == 2) return p3_vertical;
+    return p1_vertical;
+}
+
+fix32 profile_horizontal() {
+    if(active_profile == 1) return p2_horizontal;
+    if(active_profile == 2) return p3_horizontal;
+    return p1_horizontal;
+}
+
+fix32 profile_boost() {
+    if(active_profile == 1) return p2_boost;
+    if(active_profile == 2) return p3_boost;
+    return p1_boost;
+}
+
+void offset_axis(uint8 axis, fix32 amount) {
+    fix32 current = get_val(axis);
+    set_val(axis, clamp(current + (amount * (100.0 - abs(current)) / 100.0), -100.0, 100.0));
+    return;
+}
+
+void run_movement_helpers() {
+    fix32 forward = get_actual(MOVE_Y);
+
+    // Titan cannot raise Warzone's movement-speed cap. This only initiates the
+    // game's sprint/tactical-sprint action sooner.
+    if(sprint_enable && forward < -92.0 && !is_active(ADS) && !is_active(FIRE) &&
+       !is_active(STANCE) && !is_active(USE_RELOAD) && !is_active(SWAP_PLATE)) {
+        if(sprint_mode == 0) combo_run(AutoSprintPress);
+        else combo_run(AutoSprintDoubleTap);
+    }
+    else {
+        combo_stop(AutoSprintPress);
+        combo_stop(AutoSprintDoubleTap);
+    }
+
+    if(slide_mode && event_active(STANCE) && forward < -35.0) {
+        if(slide_mode == 1) combo_run(SlideJump);
+        else combo_run(SlideStand);
+    }
+
+    // Keep the user's original Snake idea as an explicit hold chord.
+    if(snake_enable && is_active(DPAD_DOWN) && is_active(STANCE)) {
+        snake_clock += get_rtime();
+        if(snake_clock >= snake_interval) {
+            snake_clock = 0;
+            snake_direction = -snake_direction;
+        }
+        offset_axis(MOVE_X, snake_strength * snake_direction);
+        set_val(DPAD_DOWN, 0.0);
+        set_val(STANCE, 0.0);
+    }
+    else {
+        snake_clock = 0;
+    }
+    return;
+}
+
+void run_action_helpers() {
+    bool action_chord = is_active(DPAD_LEFT);
+
+    // Safe default: require D-Pad Left + Use/Reload. Direct long-hold mode is
+    // available in cfgdesc but should only be used with Context Lock discipline.
+    if(loot_enable && is_active(USE_RELOAD) && time_active(USE_RELOAD) >= loot_hold_ms &&
+       ((loot_activation == 0) || (loot_activation == 1 && action_chord)) &&
+       !is_active(ADS) && !is_active(FIRE)) {
+        combo_run(LootPulse);
+        if(action_chord) set_val(DPAD_LEFT, 0.0);
+    }
+    else {
+        combo_stop(LootPulse);
+    }
+
+    // Plate Hold Assist is an accessibility-style hold. Set Warzone's Armor
+    // Plate Behavior to Apply All first; that native setting is preferred.
+    if(plate_enable && action_chord && event_active(SWAP_PLATE)) {
+        combo_run(PlateHold);
+        set_val(DPAD_LEFT, 0.0);
+    }
+
+    // Manual parachute cut/redeploy cycle. No airborne state exists in normal
+    // controller data, so this requires the explicit D-Pad Left + Jump chord.
+    if(parachute_enable && action_chord && event_active(JUMP) &&
+       (!gcv_enable || (gcv_packet_fresh() && cv_ui_state == GCV_UI_PARACHUTE))) {
+        combo_run(ParachuteCycle);
+        set_val(DPAD_LEFT, 0.0);
+        set_val(JUMP, 0.0);
+    }
+    return;
+}
+
+void save_profile() {
+    pmem_write(PM_PROFILE, active_profile);
+    pmem_save();
+    printf("GCMD:InteractiveConfiguration.Refresh");
+    return;
+}
+
+void reset_runtime() {
+    combo_stop(AutoSprintPress);
+    combo_stop(AutoSprintDoubleTap);
+    combo_stop(SlideJump);
+    combo_stop(SlideStand);
+    combo_stop(LootPulse);
+    combo_stop(PlateHold);
+    combo_stop(ParachuteCycle);
+    fire_was_active = FALSE;
+    fire_time = 0;
+    aim_clock = 0;
+    rotational_clock = 0;
+    snake_clock = 0;
+    cv_age_ms = 60000;
+    return;
+}
+
+combo AutoSprintPress {
+    set_val(SPRINT, 100.0);
+    wait(60);
+    set_val(SPRINT, 0.0);
+    wait(180);
+}
+
+combo AutoSprintDoubleTap {
+    set_val(SPRINT, 100.0);
+    wait(45);
+    set_val(SPRINT, 0.0);
+    wait(45);
+    set_val(SPRINT, 100.0);
+    wait(45);
+    set_val(SPRINT, 0.0);
+    wait(180);
+}
+
+combo SlideJump {
+    set_val(STANCE, 100.0);
+    wait(55);
+    set_val(STANCE, 0.0);
+    wait(slide_delay);
+    set_val(JUMP, 100.0);
+    wait(55);
+    set_val(JUMP, 0.0);
+    wait(120);
+}
+
+combo SlideStand {
+    set_val(STANCE, 100.0);
+    wait(55);
+    set_val(STANCE, 0.0);
+    wait(slide_delay);
+    set_val(STANCE, 100.0);
+    wait(55);
+    set_val(STANCE, 0.0);
+    wait(120);
+}
+
+combo LootPulse {
+    set_val(USE_RELOAD, 100.0);
+    wait(45);
+    set_val(USE_RELOAD, 0.0);
+    wait(55);
+}
+
+combo PlateHold {
+    set_val(SWAP_PLATE, 100.0);
+    wait(plate_hold_ms);
+    set_val(SWAP_PLATE, 0.0);
+    wait(80);
+}
+
+combo ParachuteCycle {
+    set_val(STANCE, 100.0);
+    wait(55);
+    set_val(STANCE, 0.0);
+    wait(parachute_freefall_ms);
+    set_val(JUMP, 100.0);
+    wait(55);
+    set_val(JUMP, 0.0);
+    wait(120);
+}
+
+/*
+<cfgdesc>
+[WZ Core]
+shortdesc = <<<MULTILINE
+Native Titan Two / GPC2 Warzone foundation.
+
+All gameplay-altering features default Off. Configure the game settings first,
+then enable one module at a time and test in a private or practice environment.
+MULTILINE
+control = info
+
+[Master Enable]
+shortdesc = Enables the WZ Core processing pipeline.
+byteoffset = 0
+bitsize = 8
+control = checkbox
+default = 1
+item = Enable
+
+[Active Recoil Profile]
+shortdesc = Runtime: hold ADS and press D-Pad Left or Right.
+byteoffset = 1
+bitsize = 8
+control = combobox
+default = 0
+item = Profile 1 - FG42 / Manual
+item = Profile 2 - AN-94 / Manual
+item = Profile 3 - Voyak KT-3 / Manual
+
+[Aim Micro-Motion Mode]
+shortdesc = Marketing labels such as AA V2/V3/V5 are not standards. These are explicit algorithms.
+byteoffset = 2
+bitsize = 8
+control = combobox
+default = 0
+item = Off
+item = Polar
+item = Shake
+item = Velocity
+item = Sticky
+
+[Aim Activation]
+byteoffset = 3
+bitsize = 8
+control = combobox
+default = 0
+item = ADS
+item = ADS + Fire
+
+[Aim Radius]
+shortdesc = Right-stick micro-motion amplitude.
+byteoffset = 4
+bitsize = 32
+control = spinboxf
+default = 40
+minimum = 0
+maximum = 200
+step = 1
+decimals = 1
+
+[Aim Step Interval]
+shortdesc = Milliseconds between pattern points.
+byteoffset = 8
+bitsize = 32
+control = spinbox
+default = 16
+minimum = 4
+maximum = 100
+step = 1
+
+[Aim Release Point]
+shortdesc = Stop micro-motion when deliberate right-stick magnitude exceeds this value.
+byteoffset = 12
+bitsize = 32
+control = spinboxf
+default = 200
+minimum = 0
+maximum = 1000
+step = 5
+decimals = 1
+
+[Enhanced Rotational Micro-Motion]
+shortdesc = Small left-stick pattern only while ADS and nearly stationary.
+byteoffset = 16
+bitsize = 8
+control = checkbox
+default = 0
+item = Enable
+
+[Rotational Radius]
+byteoffset = 20
+bitsize = 32
+control = spinboxf
+default = 30
+minimum = 0
+maximum = 150
+step = 1
+decimals = 1
+
+[Rotational Interval]
+byteoffset = 24
+bitsize = 32
+control = spinbox
+default = 40
+minimum = 10
+maximum = 200
+step = 1
+
+[Dynamic Anti-Recoil]
+shortdesc = Applies the selected profile while ADS + Fire.
+byteoffset = 28
+bitsize = 8
+control = checkbox
+default = 0
+item = Enable
+
+[First-Shot Boost Time]
+shortdesc = Milliseconds to add each profile's initial vertical boost.
+byteoffset = 32
+bitsize = 32
+control = spinbox
+default = 120
+minimum = 0
+maximum = 1000
+step = 5
+
+[Profile 1 Vertical - FG42]
+byteoffset = 36
+bitsize = 32
+control = spinboxf
+default = 0
+minimum = -1000
+maximum = 1000
+step = 1
+decimals = 1
+
+[Profile 1 Horizontal - FG42]
+byteoffset = 40
+bitsize = 32
+control = spinboxf
+default = 0
+minimum = -1000
+maximum = 1000
+step = 1
+decimals = 1
+
+[Profile 1 First-Shot Boost - FG42]
+byteoffset = 44
+bitsize = 32
+control = spinboxf
+default = 0
+minimum = -500
+maximum = 500
+step = 1
+decimals = 1
+
+[Profile 2 Vertical - AN-94]
+byteoffset = 48
+bitsize = 32
+control = spinboxf
+default = 0
+minimum = -1000
+maximum = 1000
+step = 1
+decimals = 1
+
+[Profile 2 Horizontal - AN-94]
+byteoffset = 52
+bitsize = 32
+control = spinboxf
+default = 0
+minimum = -1000
+maximum = 1000
+step = 1
+decimals = 1
+
+[Profile 2 First-Shot Boost - AN-94]
+byteoffset = 56
+bitsize = 32
+control = spinboxf
+default = 0
+minimum = -500
+maximum = 500
+step = 1
+decimals = 1
+
+[Profile 3 Vertical - Voyak KT-3]
+byteoffset = 60
+bitsize = 32
+control = spinboxf
+default = 0
+minimum = -1000
+maximum = 1000
+step = 1
+decimals = 1
+
+[Profile 3 Horizontal - Voyak KT-3]
+byteoffset = 64
+bitsize = 32
+control = spinboxf
+default = 0
+minimum = -1000
+maximum = 1000
+step = 1
+decimals = 1
+
+[Profile 3 First-Shot Boost - Voyak KT-3]
+byteoffset = 68
+bitsize = 32
+control = spinboxf
+default = 0
+minimum = -500
+maximum = 500
+step = 1
+decimals = 1
+
+[Auto Tactical Sprint Fallback]
+shortdesc = Prefer Warzone Tactical Sprint Assist with delay 0. This is a script fallback.
+byteoffset = 72
+bitsize = 8
+control = checkbox
+default = 0
+item = Enable
+
+[Sprint Input Mode]
+byteoffset = 73
+bitsize = 8
+control = combobox
+default = 0
+item = Press
+item = Double Tap
+
+[Slide Sequence]
+byteoffset = 74
+bitsize = 8
+control = combobox
+default = 0
+item = Off
+item = Slide to Jump
+item = Slide to Stand
+
+[Snake]
+shortdesc = Hold D-Pad Down + Stance to run the original lateral Snake concept.
+byteoffset = 75
+bitsize = 8
+control = checkbox
+default = 0
+item = Enable
+
+[Slide Delay]
+byteoffset = 76
+bitsize = 32
+control = spinbox
+default = 180
+minimum = 50
+maximum = 600
+step = 5
+
+[Snake Strength]
+byteoffset = 80
+bitsize = 32
+control = spinboxf
+default = 180
+minimum = 0
+maximum = 500
+step = 5
+decimals = 1
+
+[Snake Interval]
+byteoffset = 84
+bitsize = 32
+control = spinbox
+default = 90
+minimum = 30
+maximum = 500
+step = 5
+
+[Fast Loot Pulse]
+shortdesc = Shared-input risk. Safe mode requires D-Pad Left + Use/Reload and stops during ADS or Fire.
+byteoffset = 88
+bitsize = 8
+control = checkbox
+default = 0
+item = Enable
+
+[Fast Loot Activation]
+byteoffset = 89
+bitsize = 8
+control = combobox
+default = 1
+item = Direct Hold - Higher Risk
+item = D-Pad Left + Hold - Safer
+
+[Plate Hold Assist]
+shortdesc = Prefer the native Armor Plate Behavior: Apply All setting.
+byteoffset = 90
+bitsize = 8
+control = checkbox
+default = 0
+item = Enable
+
+[Parachute Cut Cycle]
+shortdesc = D-Pad Left + Jump. Manual-only until visual state detection is added.
+byteoffset = 91
+bitsize = 8
+control = checkbox
+default = 0
+item = Enable
+
+[Loot Hold Threshold]
+byteoffset = 92
+bitsize = 32
+control = spinbox
+default = 220
+minimum = 100
+maximum = 1000
+step = 10
+
+[Plate Hold Time]
+byteoffset = 96
+bitsize = 32
+control = spinbox
+default = 2200
+minimum = 500
+maximum = 5000
+step = 50
+
+[Parachute Freefall Time]
+byteoffset = 100
+bitsize = 32
+control = spinbox
+default = 600
+minimum = 150
+maximum = 2000
+step = 25
+
+[Start With Context Lock]
+shortdesc = Context Lock blocks all movement and action helpers. Toggle with ADS + D-Pad Down.
+byteoffset = 104
+bitsize = 8
+control = checkbox
+default = 0
+item = Enable
+
+[GCV Visual State Input]
+shortdesc = Enables the 16-byte WZ GCV protocol. Controller processing remains at the Titan polling rate.
+byteoffset = 105
+bitsize = 8
+control = checkbox
+default = 0
+item = Enable
+
+[GCV Automatic Recoil Profile]
+shortdesc = Selects Profile 1-3 only when the visual weapon result meets the confidence threshold.
+byteoffset = 106
+bitsize = 8
+control = checkbox
+default = 0
+item = Enable
+
+[GCV Context Guard]
+shortdesc = Blocks action helpers on shop, loadout, inventory, revive, reload, unknown, or stale visual state.
+byteoffset = 107
+bitsize = 8
+control = checkbox
+default = 1
+item = Enable
+
+[GCV Stale Timeout]
+shortdesc = Milliseconds after the last valid frame packet before visual state fails safe.
+byteoffset = 108
+bitsize = 32
+control = spinbox
+default = 100
+minimum = 25
+maximum = 1000
+step = 5
+
+[GCV Minimum Confidence]
+shortdesc = Minimum 0-100 confidence for automatic weapon profile selection.
+byteoffset = 112
+bitsize = 8
+control = spinbox
+default = 82
+minimum = 0
+maximum = 100
+step = 1
+
+</cfgdesc>
+*/
