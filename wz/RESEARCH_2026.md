@@ -49,6 +49,7 @@ Those are relative tuning changes, not universal Titan values. Absolute compensa
 - Gtuner IV officially supports a GPC2 compiler, Interactive Configuration, Device Monitor, and Python/OpenCV Computer Vision. [Gtuner IV overview](https://www.consoletuner.com/software/gtuner-iv/)
 - Titan Two's documented Computer Vision integration can send analyzed capture data to GPC2. [Titan Two product capabilities](https://www.consoletuner.com/products/titan-two/)
 - `gcv_ready()` must be checked before `gcv_read()`, reflected in the current Gtuner changelog and the receiver implementation. [Gtuner IV downloads/changelog](https://www.consoletuner.com/titan-two-downloads/)
+- GPC2 loop timing uses `elapsed_time()`, combo identifiers expose their own running state, and original force-feedback values are read with `ffb_get_actual(FFB_1..FFB_4, NULL)`.
 - Public GCV examples prove the worker contract and binary feedback path, but older full-frame neural detectors are unnecessary for HUD state. This project uses small ROIs and templates for lower latency. [PhantomCV reference](https://github.com/BradyMeighan/PhantomCV)
 
 ## Compliance note
