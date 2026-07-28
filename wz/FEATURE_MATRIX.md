@@ -2,11 +2,11 @@
 
 This matrix compares the supplied Zen-era ideas with the first native Titan Two/GPC2 architecture.
 
-| Feature or label | Decision | v0.1 implementation | Reason |
+| Feature or label | Decision | v0.2 implementation | Reason |
 |---|---|---|---|
 | Snake | Keep and simplify | Explicit D-Pad Down + Stance lateral pattern | Retains the supplied concept without silently altering normal movement |
-| Boosted Sprint | Re-add as constrained mode | Boosted Sprint Refresh in Sprint Input Mode | Periodically re-sends sprint/tac-sprint; cannot exceed game movement speed |
-| Auto Tactical Sprint | Keep | Press or double-tap modes | Viable, though the native Tactical Sprint Assist + delay 0 setting is preferred |
+| Boosted Sprint | Re-add as constrained mode | Immediate/periodic Sprint Re-trigger in Sprint Input Mode | Re-sends sprint; cannot exceed game movement speed |
+| Script Sprint Fallback | Keep | One-shot Press or Double Tap modes | Native Sprint Assist + delay 0 is preferred; tactical sprint requires the Sprinter perk |
 | Slide Sequences | Keep and update | Slide-to-jump and slide-to-stand | Old fixed slide-cancel timings are patch-sensitive |
 | Parachute “plugging” | Add as manual prototype | Cut, configurable freefall, redeploy | No controller-only airborne state; automatic activation requires GCV |
 | Plate Up | Prefer native; optional helper | Explicit chord and configurable hold | Apply All already handles the common case with less conflict |
