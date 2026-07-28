@@ -2,15 +2,15 @@
 
 Native Titan Two / GPC2 Warzone project with a Gtuner IV Interactive Configuration menu.
 
-Current milestone: `v0.1-foundation`
+Current milestone: `v0.2-hardened`
 
 ## Included
 
 - Four explicit aim micro-motion engines: Polar, Shake, Velocity, and Sticky
 - Optional left-stick rotational micro-motion
 - Three manual dynamic anti-recoil profiles with first-shot boost
-- Auto tactical sprint fallback
-- Boosted Sprint Refresh mode for periodic sprint/tactical-sprint re-input
+- Script sprint fallback with one-shot Press/Double Tap modes
+- Sprint Re-trigger / Boosted Refresh mode with immediate and periodic sprint input
 - Slide-to-jump and slide-to-stand sequences
 - Snake lateral movement, retained from the supplied script concept
 - Guarded fast-loot pulse, plate hold assist, and parachute cut/redeploy cycle
@@ -36,13 +36,23 @@ Default mapping is the standard Xbox/PlayStation controller layout. Tactical lay
 
 ## Recommended Warzone settings
 
-- Sprint Assist: **Tactical Sprint Assist**
-- Sprint Assist Delay: **0**
-- Armor Plate Behavior: **Apply All**
-- Slide behavior: use a tap/hybrid option that matches the selected script sequence
-- Verify Interact/Reload Behavior before enabling Fast Loot
+Use Warzone's native movement first:
 
-The native game settings are preferred where they already solve the problem. The script fallback exists for setups where the native behavior does not fit.
+- Sprint Assist: **On / Sprint Assist**
+- Sprint Assist Delay: **0**
+- Sprint Restore: **On**
+- Slide Maintains Sprint: **On**
+- Slide/Dive Behavior: **Tap to Slide**
+- Armor Plate Behavior: **Apply All**
+- Interact/Reload Behavior: **Prioritize Interact**
+
+Current Warzone grants tactical sprint through the **Sprinter perk** rather than
+as a universal base ability. Without Sprinter, the script can re-trigger only
+normal sprint.
+
+For the complete native profile, the separate script-managed sprint test profile,
+deadzones, Device Monitor checks, and Titan settings, see
+[WARZONE_SETUP.md](WARZONE_SETUP.md).
 
 ## Runtime controls
 
@@ -111,7 +121,8 @@ Sources:
 
 ## Important limitations
 
-- A script cannot raise Warzone's movement-speed cap. “Boosted Sprint Refresh” periodically re-sends sprint/tactical-sprint input only.
+- A script cannot raise Warzone's movement-speed cap. Sprint Re-trigger periodically re-sends the normal sprint input only.
+- Tactical sprint requires the Sprinter perk in current Warzone; otherwise the sprint helper only re-triggers normal sprint.
 - A script cannot shorten a server-controlled revive timer. Quick Revive Hold Assist only holds the normal input, and with GCV guard enabled it requires a fresh REVIVE UI match.
 - Fast Loot cannot be fully context-safe from controller data alone. Use the guarded chord and Context Lock; the optional GCV guard adds UI-aware blocking after calibration.
 - With GCV disabled, parachute state is not present in controller data and the cut/redeploy sequence is manual. With GCV enabled, the explicit chord is accepted only on a fresh parachute-state match.
@@ -123,6 +134,7 @@ Activision states that unauthorized scripted input devices are prohibited and su
 
 - Compile `wz.gpc` in the installed Gtuner IV version.
 - Confirm the default controller layout or add the mapping layer for a tactical/custom layout.
+- Confirm `STICK_2_Y` crosses the configured Sprint Forward Threshold in Device Monitor.
 - Verify each combo in a practice environment because Warzone timing can change by patch.
 - Calibrate weapon recoil values for the exact build, sensitivity, response curve, deadzones, FOV, and optic.
 - Run `tools\benchmark_cv.py` and compare p95 processing time with the capture frame period.
