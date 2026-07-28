@@ -2,6 +2,7 @@ import importlib.util
 import json
 import re
 import struct
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -36,6 +37,12 @@ class PacketContractTests(unittest.TestCase):
         self.assertEqual(values[3], 513)
         self.assertEqual(values[5], 1195)
         self.assertEqual(values[6:11], (2, 3, 4, 87, 1))
+
+    def test_ui_ids_match_gpc_contract(self):
+        self.assertEqual(WZ_CV.UI_GAMEPLAY, 0)
+        self.assertEqual(WZ_CV.UI_REVIVE, 4)
+        self.assertEqual(WZ_CV.UI_PARACHUTE, 5)
+        self.assertEqual(WZ_CV.UI_UNKNOWN, 255)
 
     def test_normalized_roi(self):
         self.assertEqual(
@@ -74,6 +81,13 @@ class ConfigTests(unittest.TestCase):
             if group["name"] == "weapon")
         for item in weapon["items"]:
             self.assertIn(item.get("profile", 255), (0, 1, 2, 255))
+
+    def test_required_guard_ui_states_exist(self):
+        ui = next(
+            group for group in self.config["groups"]
+            if group["name"] == "ui")
+        ids = {item["id"] for item in ui["items"]}
+        self.assertTrue({4, 5}.issubset(ids))
 
     def test_gpc_receiver_matches_packet_contract(self):
         source = (PROJECT_DIR / "wz.gpc").read_text(encoding="utf-8")
@@ -136,7 +150,104 @@ class ConfigTests(unittest.TestCase):
                 )
                 seen[byte] = title
 
-        self.assertIn(135, seen)
+        self.assertIn(139, seen)
+
+    def test_every_pmem_offset_has_a_cfgdesc_field(self):
+        source = (PROJECT_DIR / "wz.gpc").read_text(encoding="utf-8")
+        pmem_offsets = {
+            int(value)
+            for value in re.findall(r"#define\s+PM_[A-Z0-9_]+\s+(\d+)", source)
+        }
+        cfg_offsets = {
+            int(value)
+            for value in re.findall(r"byteoffset\s*=\s*(\d+)", source)
+        }
+        self.assertEqual(pmem_offsets, cfg_offsets)
+
+
+class StableResultTests(unittest.TestCase):
+    def test_requires_confirmation_and_holds_short_misses(self):
+        stable = WZ_CV.StableResult(
+            unknown_id=255,
+            confirm_frames=2,
+            hold_frames=1,
+        )
+        self.assertEqual(stable.update(4, 0.90)[0], 255)
+        self.assertEqual(stable.update(4, 0.91)[0], 4)
+        self.assertEqual(stable.update(255, 0.0)[0], 4)
+        self.assertEqual(stable.update(255, 0.0)[0], 255)
+
+
+@unittest.skipIf(WZ_CV.cv2 is None or WZ_CV.np is None, "OpenCV is not installed")
+class VisualPipelineSmokeTests(unittest.TestCase):
+    def test_pipeline_matches_synthetic_weapon_and_ui_templates(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            base_dir = Path(temp_dir)
+            weapon_dir = base_dir / "templates" / "weapon"
+            ui_dir = base_dir / "templates" / "ui"
+            weapon_dir.mkdir(parents=True)
+            ui_dir.mkdir(parents=True)
+
+            frame = WZ_CV.np.zeros((120, 160, 3), dtype=WZ_CV.np.uint8)
+            WZ_CV.cv2.rectangle(frame, (35, 25), (125, 95), (255, 255, 255), 4)
+            WZ_CV.cv2.line(frame, (45, 80), (115, 40), (255, 255, 255), 3)
+            WZ_CV.cv2.imwrite(str(weapon_dir / "sample.png"), frame)
+            WZ_CV.cv2.imwrite(str(ui_dir / "sample.png"), frame)
+
+            config = {
+                "target_process_fps": 120,
+                "debug_overlay": False,
+                "groups": [
+                    {
+                        "name": "weapon",
+                        "unknown_id": 0,
+                        "roi": [0.0, 0.0, 1.0, 1.0],
+                        "target_size": [64, 48],
+                        "method": "edge",
+                        "threshold": 0.8,
+                        "check_every": 1,
+                        "confirm_frames": 1,
+                        "hold_frames": 0,
+                        "items": [{
+                            "id": 1,
+                            "name": "TEST_WEAPON",
+                            "profile": 0,
+                            "templates": ["templates/weapon/*.png"],
+                        }],
+                    },
+                    {
+                        "name": "ui",
+                        "unknown_id": 255,
+                        "roi": [0.0, 0.0, 1.0, 1.0],
+                        "target_size": [64, 48],
+                        "method": "edge",
+                        "threshold": 0.8,
+                        "check_every": 1,
+                        "confirm_frames": 1,
+                        "hold_frames": 0,
+                        "items": [{
+                            "id": WZ_CV.UI_REVIVE,
+                            "name": "REVIVE",
+                            "templates": ["templates/ui/*.png"],
+                        }],
+                    },
+                ],
+            }
+            (base_dir / "wz_cv_config.json").write_text(
+                json.dumps(config),
+                encoding="utf-8",
+            )
+
+            pipeline = WZ_CV.WzVisualPipeline(160, 120, str(base_dir))
+            _, packet = pipeline.process(frame.copy())
+            values = struct.unpack(WZ_CV.PACKET_FORMAT, packet)
+
+            self.assertTrue(pipeline.templates_ready)
+            self.assertEqual(pipeline.last_weapon, 1)
+            self.assertEqual(pipeline.last_ui, WZ_CV.UI_REVIVE)
+            self.assertEqual(pipeline.current_profile(), 0)
+            self.assertTrue(values[2] & WZ_CV.FLAG_TEMPLATES_READY)
+            self.assertTrue(values[2] & WZ_CV.FLAG_WEAPON_KNOWN)
 
 
 if __name__ == "__main__":
