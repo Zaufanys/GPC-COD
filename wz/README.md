@@ -2,7 +2,7 @@
 
 Native Titan Two / GPC2 Warzone project with a Gtuner IV Interactive Configuration menu.
 
-Current milestone: `v0.2-hardened`
+Current milestone: `v0.3-gpc2-compile-fix`
 
 ## Included
 
