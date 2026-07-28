@@ -1,7 +1,7 @@
-#pragma METAINFO("WZ Core", 0, 2, "Zaufanys")
+#pragma METAINFO("WZ Core", 0, 3, "Zaufanys")
 
 /*
-    WZ Core v0.2
+    WZ Core v0.3
     Native Titan Two / GPC2 foundation for Call of Duty: Warzone.
 
     Default controller mapping:
@@ -324,7 +324,7 @@ main {
             sprint_latched = FALSE;
         }
 
-        if(combo_running(ReviveHold) && !revive_continue_context()) {
+        if(ReviveHold && !revive_continue_context()) {
             combo_stop(ReviveHold);
         }
 
@@ -379,7 +379,7 @@ void update_gcv_state() {
         }
     }
     if(cv_age_ms < 60000) {
-        cv_age_ms += get_rtime();
+        cv_age_ms += elapsed_time();
     }
     return;
 }
@@ -406,7 +406,7 @@ bool action_context_blocked() {
 
 bool revive_helper_context() {
     if(!revive_continue_context()) return FALSE;
-    if(combo_running(ReviveHold)) return TRUE;
+    if(ReviveHold) return TRUE;
     return is_active(DPAD_UP) && is_active(USE_RELOAD);
 }
 
@@ -423,7 +423,7 @@ bool revive_continue_context() {
 void update_fire_timer() {
     if(is_active(FIRE)) {
         if(!fire_was_active) fire_time = 0;
-        fire_time += get_rtime();
+        fire_time += elapsed_time();
         fire_was_active = TRUE;
     }
     else {
@@ -434,7 +434,7 @@ void update_fire_timer() {
 }
 
 void update_rumble_profile_hint() {
-    uint8 sample = 0;
+    fix32 sample = 0.0;
 
     if(!rumble_hint_enable || !is_active(ADS) || !is_active(FIRE)) {
         rumble_hint_clock = 0;
@@ -452,7 +452,7 @@ void update_rumble_profile_hint() {
 
     sample = strongest_rumble();
     if(sample >= rumble_low && sample <= rumble_high) {
-        rumble_hint_clock += get_rtime();
+        rumble_hint_clock += elapsed_time();
         if(rumble_hint_clock >= rumble_confirm_ms) {
             active_profile = rumble_profile;
         }
@@ -463,12 +463,12 @@ void update_rumble_profile_hint() {
     return;
 }
 
-uint8 strongest_rumble() {
-    uint8 a = get_rumble(RUMBLE_A);
-    uint8 b = get_rumble(RUMBLE_B);
-    uint8 rt = get_rumble(RUMBLE_RT);
-    uint8 lt = get_rumble(RUMBLE_LT);
-    uint8 strongest = a;
+fix32 strongest_rumble() {
+    fix32 a = ffb_get_actual(FFB_1, NULL);
+    fix32 b = ffb_get_actual(FFB_2, NULL);
+    fix32 rt = ffb_get_actual(FFB_3, NULL);
+    fix32 lt = ffb_get_actual(FFB_4, NULL);
+    fix32 strongest = a;
 
     if(b > strongest) strongest = b;
     if(rt > strongest) strongest = rt;
@@ -490,7 +490,7 @@ void apply_aim_engine() {
     fix32 velocity = abs(rx - previous_look_x) + abs(ry - previous_look_y);
     fix32 radius = aim_radius;
 
-    aim_clock += get_rtime();
+    aim_clock += elapsed_time();
     if(aim_clock >= aim_interval) {
         aim_clock = 0;
         aim_phase = (aim_phase + 1) % 8;
@@ -543,7 +543,7 @@ void apply_rotational_engine() {
     // Do not fight meaningful player movement.
     if(sqrt((lx * lx) + (ly * ly)) > 18.0) return;
 
-    rotational_clock += get_rtime();
+    rotational_clock += elapsed_time();
     if(rotational_clock >= rotational_interval) {
         rotational_clock = 0;
         rotational_phase = (rotational_phase + 1) % 4;
@@ -609,9 +609,9 @@ void run_movement_helpers() {
             else combo_run(AutoSprintDoubleTap);
         }
         else if(sprint_mode == 2) {
-            sprint_refresh_clock += get_rtime();
+            sprint_refresh_clock += elapsed_time();
             if(sprint_refresh_clock >= sprint_refresh_ms &&
-               !combo_running(AutoSprintDoubleTap)) {
+               !AutoSprintDoubleTap) {
                 sprint_refresh_clock = 0;
                 combo_run(AutoSprintDoubleTap);
             }
@@ -631,12 +631,13 @@ void run_movement_helpers() {
 
     // Keep the user's original Snake idea as an explicit hold chord.
     if(snake_enable && is_active(DPAD_DOWN) && is_active(STANCE)) {
-        snake_clock += get_rtime();
+        snake_clock += elapsed_time();
         if(snake_clock >= snake_interval) {
             snake_clock = 0;
             snake_direction = -snake_direction;
         }
-        offset_axis(MOVE_X, snake_strength * snake_direction);
+        if(snake_direction > 0) offset_axis(MOVE_X, snake_strength);
+        else offset_axis(MOVE_X, -snake_strength);
         set_val(DPAD_DOWN, 0.0);
         set_val(STANCE, 0.0);
     }
