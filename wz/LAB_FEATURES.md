@@ -3,20 +3,25 @@
 These entries re-add the older feature names without hiding their limits. All
 related options default Off.
 
-## Boosted Sprint Refresh
+## Sprint Re-trigger / Boosted Refresh
 
-Menu path: **Sprint Input Mode -> Boosted Sprint Refresh**
+Menu path: **Sprint Input Mode -> Sprint Re-trigger / Boosted Refresh**
 
-This mode periodically re-sends the normal sprint/tactical-sprint input while
-you are pushing fully forward and not ADS, firing, plating, using, or crouching.
-It can help a setup enter tactical sprint quickly after a cancel or input miss.
-It cannot exceed any movement-speed cap set by the game/server.
+This mode sends an immediate sprint double tap when forward movement begins and
+then periodically re-sends it while you are pushing fully forward and not ADS,
+firing, plating, using, or crouching. It can help a setup re-enter sprint after
+a cancel or input miss. It cannot exceed any movement-speed cap set by the
+game/server.
+
+Current Warzone grants tactical sprint only through the **Sprinter perk**.
+Without that perk, this mode can only re-trigger normal sprint.
 
 Primary setting:
 
 | Setting | Default | Purpose |
 |---|---:|---|
-| Boosted Sprint Refresh Time | 900 ms | Spacing between refresh double taps |
+| Sprint Re-trigger Time | 900 ms | Spacing between refresh double taps |
+| Sprint Forward Threshold | 92.0 | Required physical left-stick forward value |
 
 ## Quick Revive Hold Assist
 
