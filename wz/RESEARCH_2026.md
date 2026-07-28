@@ -9,7 +9,7 @@ Most advertised names are not separate game APIs:
 - **Velocity Aim:** a useful technical distinction when the injected micro-pattern scales with physical stick speed.
 - **Shake Aim:** alternating stick input; easy to implement, but frequently worse for precision.
 - **Enhanced Tracking / Pro Aim:** marketing labels unless the implementation defines a measurable algorithm.
-- **Aim Lock:** not possible from controller input alone because there are no target coordinates. Visual target detection would be a separate system; WZ CV intentionally does not implement it.
+- **Aim Lock:** not possible from controller input alone because there are no target coordinates. Visual target detection is kept as a lab-only boundary in this project and is not wired to live Titan stick output.
 - **Aim Abuse:** usually ADS cycling or other repeated activation. It conflicts with normal ADS timing and is excluded.
 
 The project consolidates these names into four explicit, testable right-stick algorithms and one optional left-stick rotational algorithm.
@@ -18,13 +18,14 @@ The project consolidates these names into four explicit, testable right-stick al
 
 | Idea | Finding |
 |---|---|
-| Boosted sprint | A controller script can initiate sprint/tactical sprint sooner, but it cannot raise the game/server movement-speed cap. |
+| Boosted sprint | A controller script can initiate or refresh sprint/tactical sprint sooner, but it cannot raise the game/server movement-speed cap. |
 | Auto tactical sprint | Viable, but Warzone's native Tactical Sprint Assist with delay 0 is the first choice. |
 | Slide sequences | Viable, patch-sensitive, and dependent on the in-game slide/dive behavior. |
 | Snake | Viable as an explicit lateral pattern; it should not silently alter normal movement. |
 | Fast loot | Risky because Use/Reload is also used for reloads, loadouts, shops, and revives. It needs a chord, hold threshold, manual Context Lock, and optional CV guard. |
 | Plate up | Native Armor Plate Behavior: Apply All is more reliable. A script hold is optional. |
-| Quick revive | A script can hold the input but cannot shorten the server-controlled revive timer. No speed claim is implemented. |
+| Quick revive | A script can hold the input but cannot shorten the server-controlled revive timer. WZ re-adds this as an explicit hold assist with a separate chord. |
+| Rumble weapon ID | Rumble is usable as a rough fallback profile hint, but it is not stable enough to be the main weapon detector. |
 | Parachute cut/redeploy | A manual sequence is viable. Automatic state awareness needs video because ordinary controller data has no parachute state. |
 
 Season 05 also changes the loot flow with Supply Drones and airborne Buy Station deliveries, which makes conservative shared-input handling more important. [Official Season 05 patch notes](https://www.callofduty.com/patchnotes/2026/07/call-of-duty-bo7-warzone-season-05-patch-notes)
@@ -50,4 +51,3 @@ Those are relative tuning changes, not universal Titan values. Absolute compensa
 ## Compliance note
 
 Activision's June 4, 2026 RICOCHET update says unauthorized scripted input devices are prohibited and that detection/enforcement continues. The project does not include detection evasion, random “humanization,” or claims that a pattern is safe from enforcement. [RICOCHET Season 04 update](https://www.callofduty.com/blog/2026/06/call-of-duty-black-ops-7-warzone-ricochet-anti-cheat-season-04)
-
