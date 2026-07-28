@@ -477,6 +477,8 @@ void update_fire_timer() {
 
 void update_rumble_profile_hint() {
     fix32 sample = 0.0;
+    fix32 low_threshold = 0.0;
+    fix32 high_threshold = 0.0;
 
     if(!rumble_hint_enable || !is_active(ADS) || !is_active(FIRE)) {
         rumble_hint_clock = 0;
@@ -493,7 +495,9 @@ void update_rumble_profile_hint() {
     }
 
     sample = strongest_rumble();
-    if(sample >= rumble_low && sample <= rumble_high) {
+    low_threshold = rumble_low;
+    high_threshold = rumble_high;
+    if(sample >= low_threshold && sample <= high_threshold) {
         rumble_hint_clock += elapsed_time();
         if(rumble_hint_clock >= rumble_confirm_ms) {
             active_profile = rumble_profile;
