@@ -280,8 +280,8 @@ init {
     ads_response_deadzone = clamp(ads_response_deadzone, 0.0, 20.0);
     ads_response_softness = clamp(ads_response_softness, 0.0, 100.0);
     revive_hold_ms = clamp(revive_hold_ms, 1000, 10000);
-    rumble_low = clamp(rumble_low, 0, 100);
-    rumble_high = clamp(rumble_high, rumble_low, 100);
+    rumble_low = clamp(rumble_low, 0.0, 100.0);
+    rumble_high = clamp(rumble_high, rumble_low, 100.0);
     rumble_profile = clamp(rumble_profile, 0, 2);
     rumble_confirm_ms = clamp(rumble_confirm_ms, 40, 1000);
     gcv_stale_ms = clamp(gcv_stale_ms, 25, 1000);
