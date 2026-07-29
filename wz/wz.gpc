@@ -1,7 +1,7 @@
-#pragma METAINFO("WZ Core", 0, 4, "Zaufanys")
+#pragma METAINFO("WZ Core", 0, 5, "Zaufanys")
 
 /*
-    WZ Core v0.4
+    WZ Core v0.5
     Native Titan Two / GPC2 foundation for Call of Duty: Warzone.
 
     Default controller mapping:
@@ -850,6 +850,10 @@ then enable one module at a time and test in a private or practice environment.
 MULTILINE
 control = info
 
+[01 - CORE AND PROFILE]
+shortdesc = Master switch, startup recoil profile, and runtime profile controls.
+control = info
+
 [Master Enable]
 shortdesc = Enables the WZ Core processing pipeline.
 byteoffset = 0
@@ -867,6 +871,44 @@ default = 0
 item = Profile 1 - FG42 / Manual
 item = Profile 2 - AN-94 / Manual
 item = Profile 3 - Voyak KT-3 / Manual
+
+[02 - CONTROLLER RESPONSE]
+shortdesc = ADS-only right-stick shaping for sensitive or abrupt TMR sticks. These controls do not add a timed delay.
+control = info
+
+[ADS Stick Softening]
+shortdesc = ADS only. Reduces near-centre right-stick response; it does not alter the physical stick or add latency.
+byteoffset = 140
+bitsize = 8
+control = checkbox
+default = 0
+item = Enable
+
+[ADS Inner Response Deadzone]
+shortdesc = Removes tiny centre movement before shaping. Start at 2.0 to 3.0 for TMR sticks.
+byteoffset = 144
+bitsize = 32
+control = spinboxf
+default = 25
+minimum = 0
+maximum = 200
+step = 1
+decimals = 1
+
+[ADS Soft-Curve Strength]
+shortdesc = 0 is linear. 40 to 55 softens small and medium movements while retaining full-stick speed.
+byteoffset = 148
+bitsize = 32
+control = spinboxf
+default = 450
+minimum = 0
+maximum = 1000
+step = 5
+decimals = 1
+
+[03 - AIM MICRO-MOTION]
+shortdesc = Optional right-stick and rotational micro-motion algorithms. All default Off.
+control = info
 
 [Aim Micro-Motion Mode]
 shortdesc = Marketing labels such as AA V2/V3/V5 are not standards. These are explicit algorithms.
@@ -946,6 +988,10 @@ default = 40
 minimum = 10
 maximum = 200
 step = 1
+
+[04 - RECOIL CONTROL]
+shortdesc = Three manual weapon profiles with vertical, horizontal, and first-shot compensation.
+control = info
 
 [Dynamic Anti-Recoil]
 shortdesc = Applies the selected profile while ADS + Fire.
@@ -1055,6 +1101,10 @@ maximum = 500
 step = 1
 decimals = 1
 
+[05 - MOVEMENT]
+shortdesc = Sprint fallback, sprint refresh, slide sequences, and Snake movement. Warzone native movement settings remain preferred.
+control = info
+
 [Script Sprint Fallback]
 shortdesc = Prefer Warzone Sprint Assist with delay 0. Tactical sprint additionally requires the Sprinter perk.
 byteoffset = 72
@@ -1117,6 +1167,31 @@ minimum = 30
 maximum = 500
 step = 5
 
+[Sprint Re-trigger Time]
+shortdesc = Refresh spacing in ms. Sends sprint immediately, then periodically. Tactical sprint requires the Sprinter perk.
+byteoffset = 116
+bitsize = 32
+control = spinbox
+default = 900
+minimum = 400
+maximum = 3000
+step = 25
+
+[Sprint Forward Threshold]
+shortdesc = Left-stick forward percentage required by script sprint modes. Confirm the stick reaches this value in Device Monitor.
+byteoffset = 136
+bitsize = 32
+control = spinboxf
+default = 920
+minimum = 700
+maximum = 1000
+step = 5
+decimals = 1
+
+[06 - ACTION ASSISTS]
+shortdesc = Guarded loot, plate, parachute, and revive input helpers. Use Context Lock around menus and shared inputs.
+control = info
+
 [Fast Loot Pulse]
 shortdesc = Shared-input risk. Safe mode requires D-Pad Left + Use/Reload and stops during ADS or Fire.
 byteoffset = 88
@@ -1176,27 +1251,6 @@ minimum = 150
 maximum = 2000
 step = 25
 
-[Sprint Re-trigger Time]
-shortdesc = Refresh spacing in ms. Sends sprint immediately, then periodically. Tactical sprint requires the Sprinter perk.
-byteoffset = 116
-bitsize = 32
-control = spinbox
-default = 900
-minimum = 400
-maximum = 3000
-step = 25
-
-[Sprint Forward Threshold]
-shortdesc = Left-stick forward percentage required by script sprint modes. Confirm the stick reaches this value in Device Monitor.
-byteoffset = 136
-bitsize = 32
-control = spinboxf
-default = 920
-minimum = 700
-maximum = 1000
-step = 5
-decimals = 1
-
 [Quick Revive Hold Assist]
 shortdesc = D-Pad Up + Use/Reload. Holds normal revive/interact input; it does not shorten server timers.
 byteoffset = 120
@@ -1213,6 +1267,10 @@ default = 4500
 minimum = 1000
 maximum = 10000
 step = 100
+
+[07 - SAFETY, PROFILE HINTS AND VISION]
+shortdesc = Context Lock, rumble profile hint, and optional GCV visual-state guarding.
+control = info
 
 [Rumble Profile Hint]
 shortdesc = Fallback only. Selects one recoil profile after a calibrated rumble window while ADS + Fire.
@@ -1311,36 +1369,6 @@ default = 82
 minimum = 0
 maximum = 100
 step = 1
-
-[ADS Stick Softening]
-shortdesc = ADS only. Reduces near-centre right-stick response; it does not alter the physical stick or add latency.
-byteoffset = 140
-bitsize = 8
-control = checkbox
-default = 0
-item = Enable
-
-[ADS Inner Response Deadzone]
-shortdesc = Removes tiny centre movement before shaping. Start at 2.0 to 3.0 for TMR sticks.
-byteoffset = 144
-bitsize = 32
-control = spinboxf
-default = 25
-minimum = 0
-maximum = 200
-step = 1
-decimals = 1
-
-[ADS Soft-Curve Strength]
-shortdesc = 0 is linear. 40 to 55 softens small and medium movements while retaining full-stick speed.
-byteoffset = 148
-bitsize = 32
-control = spinboxf
-default = 450
-minimum = 0
-maximum = 1000
-step = 5
-decimals = 1
 
 </cfgdesc>
 */
